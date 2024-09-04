@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         AI 插嘴
 // @author       MintCider
-// @version      0.0.1
+// @version      0.0.2
 // @description  接入 AI 并随机插嘴。详细使用说明见项目主页 README。
 // @timestamp    1725438100
 // @license      MIT
 // @homepageURL  https://github.com/MintCider/ai-interrupt
-// @updateUrl
+// @updateUrl    https://github.com/MintCider/ai-interrupt/releases/latest/download/ai-interrupt.js
 // @sealVersion  1.4.6
 // ==/UserScript==

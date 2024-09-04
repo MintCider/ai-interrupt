@@ -10,7 +10,7 @@
 
 ### 安装
 
-在本项目 Release 页面中，直接下载最新编译的 JS 文件，并上传到海报核心即可。
+在本项目 Release 页面中，直接下载最新编译的 JS 文件，或 [点击这里](https://github.com/MintCider/ai-interrupt/releases/latest/download/ai-interrupt.js) 下载。随后上传到海报核心即可。
 
 ### 命令
 

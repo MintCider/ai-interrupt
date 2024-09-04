@@ -62,7 +62,7 @@ function main() {
   // 注册扩展
   let ext = seal.ext.find('ai-interrupt');
   if (!ext) {
-    ext = seal.ext.new('ai-interrupt', 'MintCider', '0.0.1');
+    ext = seal.ext.new('ai-interrupt', 'MintCider', '0.0.2');
     seal.ext.register(ext);
   }
 
