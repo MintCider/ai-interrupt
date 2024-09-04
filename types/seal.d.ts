@@ -203,6 +203,14 @@ declare namespace seal {
     find(name: string): ExtInfo;
 
     newCmdItemInfo(): CmdItemInfo;
+    registerIntConfig(ext: ExtInfo, key: string, value: number, description?: string): void;
+    registerFloatConfig(ext: ExtInfo, key: string, value: number, description?: string): void;
+    registerStringConfig(ext: ExtInfo, key: string, value: string, description?: string): void;
+    registerBoolConfig(ext: ExtInfo, key: string, value: boolean, description?: string): void;
+    getIntConfig(ext: ExtInfo, key: string): number;
+    getFloatConfig(ext: ExtInfo, key: string): number;
+    getStringConfig(ext: ExtInfo, key: string): string;
+    getBoolConfig(ext: ExtInfo, key: string): boolean;
   };
 
   interface CocRuleInfo {

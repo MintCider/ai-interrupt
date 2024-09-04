@@ -1,10 +1,11 @@
 // ==UserScript==
-// @name         模板项目
-// @author       作者名
-// @version      1.0.0
-// @description  这是海豹的js扩展模板项目，请自行修改信息
-// @timestamp    1674477074
-// 2023/1/23
+// @name         AI 插嘴
+// @author       MintCider
+// @version      0.0.1
+// @description  接入 AI 并随机插嘴。详细使用说明见项目主页 README。
+// @timestamp    1725438100
 // @license      MIT
-// @homepageURL  https://github.com/sealdice/sealdice-js-template
+// @homepageURL  https://github.com/MintCider/ai-interrupt
+// @updateUrl
+// @sealVersion  1.4.6
 // ==/UserScript==
