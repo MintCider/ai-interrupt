@@ -13,9 +13,10 @@ function registerConfigs(ext: seal.ExtInfo): void {
   seal.ext.registerIntConfig(ext, "history_length", 50, "历史记录保存的最大长度");
   seal.ext.registerIntConfig(ext, "trigger_length", 25, "允许触发插嘴的最小历史记录长度");
   seal.ext.registerIntConfig(ext, "privilege", 0, "开启关闭插件所需的权限等级");
-  seal.ext.registerBoolConfig(ext, "react_at", true, "被 @ 时是否必定回复（无论历史记录长短）");
   seal.ext.registerStringConfig(ext, "nickname", "", "骰子昵称");
   seal.ext.registerStringConfig(ext, "id", "", "骰子 QQ 号");
+  seal.ext.registerBoolConfig(ext, "react_at", true, "被 @ 时是否必定回复（无论历史记录长短）");
+  seal.ext.registerBoolConfig(ext, "reply", false, "插嘴时是否回复触发消息");
   seal.ext.registerBoolConfig(ext, "debug_prompt", false, "打印 prompt 日志");
   seal.ext.registerBoolConfig(ext, "debug_resp", true, "打印 API Response 日志");
   seal.ext.registerStringConfig(ext, "---------------------------- 视觉大模型设置 ----------------------------", "本配置项无实际意义");
@@ -186,6 +187,7 @@ function main() {
 
       // Insert user content
       let userMessage = msg.message;
+      const userMessageID = msg.rawId;
       if (userMessage.includes("[CQ:image,file=") && seal.ext.getBoolConfig(ext, "parse_image")) {
         userMessage = await replaceCQImage(
           userMessage,
@@ -247,7 +249,7 @@ function main() {
         );
         rawHistories[ctx.group.groupId]["messages"] = currentHistory.messages;
         storageSet(ext, "histories", JSON.stringify(rawHistories));
-        seal.replyToSender(ctx, msg, assistantMessage);
+        seal.replyToSender(ctx, msg, `${seal.ext.getBoolConfig(ext, 'reply') ? `[CQ:reply,id=${userMessageID}]` : ""}${assistantMessage}`);
       }
     }
   }
