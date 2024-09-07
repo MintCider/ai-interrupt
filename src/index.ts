@@ -29,9 +29,14 @@ function registerConfigs(ext: seal.ExtInfo): void {
   seal.ext.registerFloatConfig(ext, "image_temperature", -1);
   seal.ext.registerFloatConfig(ext, "image_top_p", -1);
   seal.ext.registerStringConfig(ext, "---------------------------- 文本大模型设置 ----------------------------", "本配置项无实际意义");
-  seal.ext.registerStringConfig(ext, "system_prompt", "你是一个桌游机器人", "文本大模型的系统提示");
-  seal.ext.registerStringConfig(ext, "user_schema", "<nickname>（<id>）：<message>", "用户消息 prompt 格式");
-  seal.ext.registerStringConfig(ext, "assistant_schema", "<nickname>（<id>）：<message>", "骰子消息 prompt 格式");
+  seal.ext.registerStringConfig(ext, "system_schema",
+    "你是一个工作在群聊中的机器人，你叫<nickname>，id为<id>。你工作在群聊中。接下来你会收到一系列消息，来自不同的用户和你自己。首先，你应该判断现在是否适合插话，如果不适合，请直接回复「无」。如果适合，你应该如此插话：\n" +
+    "\n" +
+    "1. 以「<nickname>（<id>）：<内容>」的方式回复。\n" +
+    "\n" +
+    "记住，如果现在不适合插话，请直接回复「无」，回复越短越好，如同真正的群聊参与者。", "文本大模型的系统提示格式");
+  seal.ext.registerStringConfig(ext, "user_schema", "<nickname>（<id>）：<message>", "文本大模型的用户消息 prompt 格式");
+  seal.ext.registerStringConfig(ext, "assistant_schema", "<nickname>（<id>）：<message>", "文本大模型的骰子消息 prompt 格式");
   seal.ext.registerStringConfig(ext, "retrieve_schema", "<nickname>（<id>）：(.*)", "从大模型回复提取骰子消息的正则表达式（**注意区分全角半角**）");
   seal.ext.registerStringConfig(ext, "request_URL", "", "文本大模型的 API URL");
   seal.ext.registerStringConfig(ext, "key", "", "文本大模型的 API Key");
@@ -215,13 +220,23 @@ function main() {
       )) {
         if (seal.ext.getBoolConfig(ext, "debug_prompt")) {
           console.log(currentHistory.buildPromptString(
-            seal.ext.getStringConfig(ext, "system_prompt"),
+            replaceMarker(
+              seal.ext.getStringConfig(ext, "system_schema"),
+              seal.ext.getStringConfig(ext, "nickname"),
+              seal.ext.getStringConfig(ext, "id"),
+              ""
+            ),
             seal.ext.getStringConfig(ext, "user_schema"),
             seal.ext.getStringConfig(ext, "assistant_schema")));
         }
         const resp = await requestAPI(
           currentHistory.buildPrompt(
-            seal.ext.getStringConfig(ext, "system_prompt"),
+            replaceMarker(
+              seal.ext.getStringConfig(ext, "system_schema"),
+              seal.ext.getStringConfig(ext, "nickname"),
+              seal.ext.getStringConfig(ext, "id"),
+              ""
+            ),
             seal.ext.getStringConfig(ext, "user_schema"),
             seal.ext.getStringConfig(ext, "assistant_schema")
           ),
