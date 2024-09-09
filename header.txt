@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AI 插嘴
 // @author       MintCider
-// @version      0.1.0
+// @version      0.1.1
 // @description  接入 AI 并随机插嘴。详细使用说明见项目主页 README。
 // @timestamp    1725438100
 // @license      MIT
@@ -28,3 +28,4 @@
 // ## 修复
 //
 // - 预防性增加了插件配置项数据校验，在部分配置缺失时，会在提示后自动关闭插件，以免重复触发错误。
+// - 构建：通过支持 UTF-8 字符集并关闭代码最小化，增强了产物的可读性（@JustAnotherID）
