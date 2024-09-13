@@ -49,13 +49,13 @@ function registerConfigs(ext: seal.ExtInfo): void {
 function registerCommand(ext: seal.ExtInfo): void {
   const cmdInterrupt = seal.ext.newCmdItemInfo();
   cmdInterrupt.name = "interrupt";
-  cmdInterrupt.help = "可以使用 .interrupt on/off/status 来开启/关闭/查看 AI 插嘴功能，可以使用 .interrupt clear 清除储存的历史记录";
+  cmdInterrupt.help = "可以使用 .interrupt on/off/status 来开启/关闭/查看 AI 插嘴功能，可以使用 .interrupt clear all/users/assistant 清除储存的历史记录";
   cmdInterrupt.solve = (ctx, msg, cmdArgs) => {
-    const val = cmdArgs.getArgN(1);
+    const command = cmdArgs.getArgN(1);
     const switches: {
       [key: string]: boolean
     } = JSON.parse(storageGet(ext, "switches"));
-    switch (val) {
+    switch (command) {
       case "on":
         if (msg.platform !== "QQ" || ctx.isPrivate) {
           seal.replyToSender(ctx, msg, "只能在 QQ 群聊中开启或关闭插嘴功能！");
@@ -101,12 +101,33 @@ function registerCommand(ext: seal.ExtInfo): void {
           seal.replyToSender(ctx, msg, "权限不足");
           return seal.ext.newCmdExecuteResult(true);
         }
-        delete rawHistories[ctx.group.groupId];
-        storageSet(ext, "histories", JSON.stringify(rawHistories));
-        seal.replyToSender(ctx, msg, "群内记录的聊天内容清除了");
-        return seal.ext.newCmdExecuteResult(true);
+        const option = cmdArgs.getArgN(2);
+        switch (option) {
+          case "all":
+            delete rawHistories[ctx.group.groupId];
+            storageSet(ext, "histories", JSON.stringify(rawHistories));
+            seal.replyToSender(ctx, msg, "群内记录的全部聊天内容清除了");
+            return seal.ext.newCmdExecuteResult(true);
+          case "users":
+            rawHistories[ctx.group.groupId]["messages"] = rawHistories[ctx.group.groupId]["messages"].filter((message) => {
+              return message.role !== "user"
+            });
+            storageSet(ext, "histories", JSON.stringify(rawHistories));
+            seal.replyToSender(ctx, msg, "群内记录的用户聊天内容清除了");
+            return seal.ext.newCmdExecuteResult(true);
+          case "assistant":
+            rawHistories[ctx.group.groupId]["messages"] = rawHistories[ctx.group.groupId]["messages"].filter((message) => {
+              return message.role !== "assistant"
+            });
+            storageSet(ext, "histories", JSON.stringify(rawHistories));
+            seal.replyToSender(ctx, msg, "群内记录的骰子聊天内容清除了");
+            return seal.ext.newCmdExecuteResult(true);
+          default:
+            seal.replyToSender(ctx, msg, "可以使用 .interrupt clear all/users/assistant 清除储存的全部/用户/骰子历史记录");
+            return seal.ext.newCmdExecuteResult(true);
+        }
       default:
-        seal.replyToSender(ctx, msg, "可以使用 .interrupt on/off/status 来开启/关闭/查看 AI 插嘴功能，可以使用 .interrupt clear 清除储存的历史记录");
+        seal.replyToSender(ctx, msg, "可以使用 .interrupt on/off/status 来开启/关闭/查看 AI 插嘴功能，可以使用 .interrupt clear all/users/assistant 清除储存的全部/用户/骰子历史记录");
         return seal.ext.newCmdExecuteResult(true);
     }
   }
@@ -117,7 +138,7 @@ function main() {
   // 注册扩展
   let ext = seal.ext.find("ai-interrupt");
   if (!ext) {
-    ext = seal.ext.new("ai-interrupt", "MintCider", "0.1.1");
+    ext = seal.ext.new("ai-interrupt", "MintCider", "0.2.0");
 
     registerCommand(ext);
     seal.ext.register(ext);
@@ -153,7 +174,7 @@ function main() {
         if (!valid) {
           switches[ctx.group.groupId] = false;
           storageSet(ext, "switches", JSON.stringify(switches));
-          seal.replyToSender(ctx, msg, "AI 插嘴：数据有误，请考虑回退插件版本，或使用 .interrupt clear 清空保存的聊天记录。本插件已自动关闭，可使用 .interrupt on 开启。");
+          seal.replyToSender(ctx, msg, "AI 插嘴：数据有误，请考虑回退插件版本，或使用 .interrupt clear all 清空保存的聊天记录。本插件已自动关闭，可使用 .interrupt on 开启。");
           return
         }
         currentHistory.messages = rawHistories[ctx.group.groupId]["messages"];

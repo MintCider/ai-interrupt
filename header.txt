@@ -1,31 +1,21 @@
 // ==UserScript==
 // @name         AI 插嘴
 // @author       MintCider
-// @version      0.1.1
+// @version      0.2.0
 // @description  接入 AI 并随机插嘴。详细使用说明见项目主页 README。
-// @timestamp    1725438100
+// @timestamp    1726221700
 // @license      MIT
 // @homepageURL  https://github.com/MintCider/ai-interrupt
 // @updateUrl    https://github.com/MintCider/ai-interrupt/releases/latest/download/ai-interrupt.js
 // @sealVersion  1.4.6
 // ==/UserScript==
 
-// # v0.1.0 更新日志
+// # v0.2.0 更新日志
 //
 // ## ⚠️注意⚠️
 //
-// 由于数据存储格式发生变动，从 `v0.1.0` 之前版本升级而来的话，会出现数据不匹配。可以通过 `.interrupt clear` 清除旧数据。
+// 由于数据存储格式发生变动，从 `v0.1.0` 之前版本升级而来的话，会出现数据不匹配。可以通过 `.interrupt clear all` 清除旧数据。
 //
 // ## 功能
 //
-// - 调用文本大模型时，将多轮对话格式修改为了单轮对话格式，理论上可以提升回复质量。
-// - 调用文本大模型时更加灵活自由的：可以自定义生成 prompt 中的消息格式，也可以自定义如何从模型回复中取回需要的信息。但是在充分理解 README 之前，不建议随意修改。
-// - 调用大模型的 `temperature` 与 `top_p` 参数在收到 [0.0, 1.0] 区间以外的数值时，调用 API 将使用模型默认值。
-// - 调用大模型的 `temperature` 与 `top_p` 参数默认值修改为 -1，
-// - 增加了对视觉大模型的支持。正确填写参数后，可以用文字描述聊天记录中的图片。注意流量与 token 消耗，以及耗时的增加。
-// - 增加了「插嘴时是否回复触发消息」开关。由于视觉大模型可能引入额外的延迟，开启此功能后，可以更好的理解是哪一句话触发了 AI 插嘴。
-//
-// ## 修复
-//
-// - 预防性增加了插件配置项数据校验，在部分配置缺失时，会在提示后自动关闭插件，以免重复触发错误。
-// - 构建：通过支持 UTF-8 字符集并关闭代码最小化，增强了产物的可读性（@JustAnotherID）
+// - `.interrupt clear` 命令增加 `all/users/assistant` 参数。可以在保留用户聊天记录的情况下，删除骰子 AI 生成的回复，以快速应用 system prompt 的变化。
