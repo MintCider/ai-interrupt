@@ -1,4 +1,4 @@
-import {ChatHistory} from "./types";
+import { ChatHistory } from "./types";
 import {
   replaceCQImage,
   replaceMarker,
@@ -9,7 +9,7 @@ import {
 
 function registerConfigs(ext: seal.ExtInfo): void {
   seal.ext.registerStringConfig(ext, "---------------------------- 基础设置 ----------------------------", "本配置项无实际意义");
-  seal.ext.registerFloatConfig(ext, "possibility", 0.05, "插嘴的概率");
+  seal.ext.registerFloatConfig(ext, "possibility", 0.05, "插嘴的概率（全局最大值）");
   seal.ext.registerIntConfig(ext, "history_length", 50, "历史记录保存的最大长度");
   seal.ext.registerIntConfig(ext, "trigger_length", 25, "允许触发插嘴的最小历史记录长度");
   seal.ext.registerIntConfig(ext, "privilege", 0, "开启关闭插件所需的权限等级");
@@ -68,19 +68,20 @@ function registerCommand(ext: seal.ExtInfo): void {
         }
         switches[ctx.group.groupId] = true;
         storageSet(ext, "switches", JSON.stringify(switches));
-        seal.replyToSender(ctx, msg, "群内 AI 插嘴功能开启了");
         const possibility = cmdArgs.getArgN(2);
         if (possibility == null || isNaN(parseFloat(possibility))) {
-          seal.vars.strSet(ctx, `$gPossibility`,seal.ext.getFloatConfig(ext, "possibility"))
+          seal.vars.strSet(ctx, `$gPossibility`, seal.ext.getFloatConfig(ext, "possibility"))
+          seal.replyToSender(ctx, msg, "群内 AI 插嘴功能开启了");
           seal.replyToSender(ctx, msg, "插嘴概率设置为 " + parseFloat(seal.vars.strGet(ctx, `$gPossibility`)[0]));
           return seal.ext.newCmdExecuteResult(true);
         } else {
           const possibilityNum = parseFloat(possibility);
-          if (possibilityNum < 0 || possibilityNum > 1) {
-            seal.replyToSender(ctx, msg, "插嘴概率必须在 0 到 1 之间");
-            return seal.ext.newCmdExecuteResult(true);
+          if (possibilityNum < 0 || possibilityNum > seal.ext.getFloatConfig(ext, "possibility")) {
+            seal.replyToSender(ctx, msg, "插嘴概率必须在 0 到 " + seal.ext.getFloatConfig(ext, "possibility") + " 之间");
+            seal.vars.strSet(ctx, `$gPossibility`, seal.ext.getFloatConfig(ext, "possibility"))
+          } else {
+            seal.vars.strSet(ctx, `$gPossibility`, possibility)
           }
-          seal.vars.strSet(ctx, `$gPossibility`, possibility)
           seal.replyToSender(ctx, msg, "插嘴概率设置为 " + parseFloat(seal.vars.strGet(ctx, `$gPossibility`)[0]));
           return seal.ext.newCmdExecuteResult(true);
         }
@@ -244,8 +245,8 @@ function main() {
         )
       }
       currentHistory.addMessageUser(
-        userMessage, msg.sender.nickname, msg.sender.userId.slice(3), 
-        seal.ext.getIntConfig(ext, "history_length"), 
+        userMessage, msg.sender.nickname, msg.sender.userId.slice(3),
+        seal.ext.getIntConfig(ext, "history_length"),
         seal.ext.getIntConfig(ext, "expire_time")
       );
       rawHistories[ctx.group.groupId]["messages"] = currentHistory.messages;
