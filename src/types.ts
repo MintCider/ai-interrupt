@@ -1,4 +1,4 @@
-import {replaceMarker} from "./utils";
+import { replaceMarker } from "./utils";
 
 type Role = "user" | "assistant" | "system";
 
@@ -7,6 +7,7 @@ export type Message = {
   nickname: string;
   id: string;
   content: string;
+  expire: number;
 };
 
 export type PromptMessage = {
@@ -30,27 +31,40 @@ export class ChatHistory {
     this.messages = [];
   }
 
-  addMessageUser(message: string, nickname: string, id: string, lengthLimit: number): void {
-    while (this.messages.length >= lengthLimit) {
-      this.messages.shift();
+  addMessageUser(message: string, nickname: string, id: string, lengthLimit: number, expire_time: number): void {
+    if ((this.messages.length > 0)) {
+      while (this.messages.length > 0 && this.messages[0].expire < Date.now() && this.messages[0].expire > 0) {
+        this.messages.shift();
+      }
+      while (this.messages.length >= lengthLimit) {
+        this.messages.shift();
+      } 
     }
     this.messages.push({
       role: "user",
       nickname: nickname,
       id: id,
       content: message,
+      expire: expire_time == 0 ? 0 : Date.now() + expire_time * 1000
     });
   }
 
-  addMessageAssistant(message: string, nickname: string, id: string, lengthLimit: number): void {
-    while (this.messages.length >= lengthLimit) {
-      this.messages.shift();
+  addMessageAssistant(message: string, nickname: string, id: string, lengthLimit: number, expire_time: number): void {
+    if ((this.messages.length > 0)) {
+      while (this.messages.length > 0 && this.messages[0].expire < Date.now() && this.messages[0].expire > 0) {
+        this.messages.shift();
+      }
+
+      while (this.messages.length >= lengthLimit) {
+        this.messages.shift();
+      } 
     }
     this.messages.push({
       role: "assistant",
       nickname: nickname,
       id: id,
       content: message,
+      expire: expire_time == 0 ? 0 : Date.now() + expire_time * 1000
     });
   }
 
@@ -59,7 +73,7 @@ export class ChatHistory {
   }
 
   buildPrompt(systemPrompt: string, userSchema: string, assistantSchema: string): PromptMessage[] {
-    const prompt: PromptMessage[] = [{role: "system", content: systemPrompt}];
+    const prompt: PromptMessage[] = [{ role: "system", content: systemPrompt }];
     let content: string = "";
 
     for (const message of this.messages) {
@@ -71,7 +85,7 @@ export class ChatHistory {
       );
       content = content + parsedMessage + "\n";
     }
-    prompt.push({role: "user", content});
+    prompt.push({ role: "user", content });
 
     return prompt;
   }

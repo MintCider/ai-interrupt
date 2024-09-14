@@ -13,6 +13,7 @@ function registerConfigs(ext: seal.ExtInfo): void {
   seal.ext.registerIntConfig(ext, "history_length", 50, "历史记录保存的最大长度");
   seal.ext.registerIntConfig(ext, "trigger_length", 25, "允许触发插嘴的最小历史记录长度");
   seal.ext.registerIntConfig(ext, "privilege", 0, "开启关闭插件所需的权限等级");
+  seal.ext.registerIntConfig(ext, "expire_time", 0, "历史记录的过期时间（秒）（如果为0则不会过期）")
   seal.ext.registerStringConfig(ext, "nickname", "", "骰子昵称");
   seal.ext.registerStringConfig(ext, "id", "", "骰子 QQ 号");
   seal.ext.registerBoolConfig(ext, "react_at", true, "被 @ 时是否必定回复（无论历史记录长短）");
@@ -68,7 +69,21 @@ function registerCommand(ext: seal.ExtInfo): void {
         switches[ctx.group.groupId] = true;
         storageSet(ext, "switches", JSON.stringify(switches));
         seal.replyToSender(ctx, msg, "群内 AI 插嘴功能开启了");
-        return seal.ext.newCmdExecuteResult(true);
+        const possibility = cmdArgs.getArgN(2);
+        if (possibility == null || isNaN(parseFloat(possibility))) {
+          seal.vars.strSet(ctx, `$gPossibility`,seal.ext.getFloatConfig(ext, "possibility"))
+          seal.replyToSender(ctx, msg, "插嘴概率设置为 " + parseFloat(seal.vars.strGet(ctx, `$gPossibility`)[0]));
+          return seal.ext.newCmdExecuteResult(true);
+        } else {
+          const possibilityNum = parseFloat(possibility);
+          if (possibilityNum < 0 || possibilityNum > 1) {
+            seal.replyToSender(ctx, msg, "插嘴概率必须在 0 到 1 之间");
+            return seal.ext.newCmdExecuteResult(true);
+          }
+          seal.vars.strSet(ctx, `$gPossibility`, possibility)
+          seal.replyToSender(ctx, msg, "插嘴概率设置为 " + parseFloat(seal.vars.strGet(ctx, `$gPossibility`)[0]));
+          return seal.ext.newCmdExecuteResult(true);
+        }
       case "off":
         if (msg.platform !== "QQ" || ctx.isPrivate) {
           seal.replyToSender(ctx, msg, "只能在 QQ 群聊中开启或关闭插嘴功能！");
@@ -228,7 +243,11 @@ function main() {
           seal.ext.getBoolConfig(ext, "debug_resp")
         )
       }
-      currentHistory.addMessageUser(userMessage, msg.sender.nickname, msg.sender.userId.slice(3), seal.ext.getIntConfig(ext, "history_length"));
+      currentHistory.addMessageUser(
+        userMessage, msg.sender.nickname, msg.sender.userId.slice(3), 
+        seal.ext.getIntConfig(ext, "history_length"), 
+        seal.ext.getIntConfig(ext, "expire_time")
+      );
       rawHistories[ctx.group.groupId]["messages"] = currentHistory.messages;
       storageSet(ext, "histories", JSON.stringify(rawHistories));
       let at = false;
@@ -237,7 +256,7 @@ function main() {
       }
       if (at || (
         currentHistory.getLength() >= seal.ext.getIntConfig(ext, "trigger_length")
-        && Math.random() < seal.ext.getFloatConfig(ext, "possibility")
+        && Math.random() < parseFloat(seal.vars.strGet(ctx, `$gPossibility`)[0])
       )) {
         if (seal.ext.getBoolConfig(ext, "debug_prompt")) {
           console.log(currentHistory.buildPromptString(
@@ -281,7 +300,8 @@ function main() {
           assistantMessage,
           seal.ext.getStringConfig(ext, "nickname"),
           seal.ext.getStringConfig(ext, "id"),
-          seal.ext.getIntConfig(ext, "history_length")
+          seal.ext.getIntConfig(ext, "history_length"),
+          seal.ext.getIntConfig(ext, "expire_time")
         );
         rawHistories[ctx.group.groupId]["messages"] = currentHistory.messages;
         storageSet(ext, "histories", JSON.stringify(rawHistories));
