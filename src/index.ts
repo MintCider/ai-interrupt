@@ -276,7 +276,7 @@ function main() {
       // Insert user content
       let userMessage = msg.message;
       const userMessageID = msg.rawId;
-      if (userMessage.includes("[CQ:image,file=") && seal.ext.getBoolConfig(ext, "parse_image")) {
+      if (userMessage.includes("[CQ:image") && seal.ext.getBoolConfig(ext, "parse_image")) {
         userMessage = await replaceCQImage(
           userMessage,
           seal.ext.getStringConfig(ext, "image_system_prompt"),

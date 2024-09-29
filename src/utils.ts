@@ -74,9 +74,9 @@ function buildImagePrompt(imageURL: string, systemPrompt: string): ImagePromptMe
 }
 
 export async function replaceCQImage(raw: string, systemPrompt: string, URL: string, key: string, model: string, maxTokens: number, temperature: number, topP: number, debugPrompt: boolean, debugResp: boolean): Promise<string> {
-  const regexPattern = /\[CQ:image,file=(.*)\]/g;
+  const regexPattern = /\[CQ:image[^\[\]]*(file|url)=(http[^,]*)[^\[\]]*?\]/g;
   const matches: { match: string; capture: string }[] = [];
-  raw.replace(regexPattern, (match, capture) => {
+  raw.replace(regexPattern, (match, _, capture) => {
     matches.push({match, capture});
     return match;
   })
