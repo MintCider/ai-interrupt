@@ -38,12 +38,16 @@ function registerConfigs(ext: seal.ExtInfo): void {
   seal.ext.registerStringConfig(ext, "user_schema", "<nickname>（<id>）：<message>", "文本大模型的用户消息 prompt 格式");
   seal.ext.registerStringConfig(ext, "assistant_schema", "<nickname>（<id>）：<message>", "文本大模型的骰子消息 prompt 格式");
   seal.ext.registerStringConfig(ext, "retrieve_schema", "<nickname>（<id>）：(.*)", "从大模型回复提取骰子消息的正则表达式（**注意区分全角半角**）");
+  seal.ext.registerBoolConfig(ext, "regexp_s", false, "提取回复时，允许通配符（.）匹配换行符（\\n）（暂不可用）");
+  seal.ext.registerBoolConfig(ext, "regexp_g", false, "提取回复时，处理多个匹配项");
   seal.ext.registerStringConfig(ext, "request_URL", "", "文本大模型的 API URL");
   seal.ext.registerStringConfig(ext, "key", "", "文本大模型的 API Key");
   seal.ext.registerStringConfig(ext, "model", "", "文本大模型的型号");
   seal.ext.registerIntConfig(ext, "max_tokens", 200, "文本大模型最大生成长度");
   seal.ext.registerFloatConfig(ext, "temperature", -1);
   seal.ext.registerFloatConfig(ext, "top_p", -1);
+  seal.ext.registerBoolConfig(ext, "mock_api", false, "开启此选项后，将不会实际请求 API，并使用下方的测试文本作为 API 回复");
+  seal.ext.registerStringConfig(ext, "mock_api_text", "", "假请求的回复文本");
 }
 
 function registerCommand(ext: seal.ExtInfo): void {
@@ -235,6 +239,7 @@ function main() {
       if (msg.message.includes(`[CQ:at,qq=${seal.ext.getStringConfig(ext, "id")}]`)) {
         at = seal.ext.getBoolConfig(ext, "react_at");
       }
+      // Check reply condition
       if (at || (
         currentHistory.getLength() >= seal.ext.getIntConfig(ext, "trigger_length")
         && Math.random() < seal.ext.getFloatConfig(ext, "possibility")
@@ -250,7 +255,9 @@ function main() {
             seal.ext.getStringConfig(ext, "user_schema"),
             seal.ext.getStringConfig(ext, "assistant_schema")));
         }
-        const resp = await requestAPI(
+        const resp = seal.ext.getBoolConfig(ext, "mock_api") ?
+          seal.ext.getStringConfig(ext, "mock_api_text") :
+          await requestAPI(
           currentHistory.buildPrompt(
             replaceMarker(
               seal.ext.getStringConfig(ext, "system_schema"),
@@ -271,21 +278,27 @@ function main() {
           seal.ext.getStringConfig(ext, "nickname"),
           seal.ext.getStringConfig(ext, "id"),
           ""
-        ));
-        const retrieveMatchResult = retrieveMatchExpr.exec(resp);
-        const assistantMessage = retrieveMatchResult && retrieveMatchResult[1] ? retrieveMatchResult[1] : "";
-        if (!assistantMessage) {
-          return;
+        ), "g");
+        // ), seal.ext.getBoolConfig(ext, "regexp_s") ? "gs" : "g");
+        const retrieveMatchResult = [...resp.matchAll(retrieveMatchExpr)];
+        for (const match of retrieveMatchResult) {
+          const assistantMessage = match?.[1] ?? "";
+          if (!assistantMessage) {
+            continue;
+          }
+          currentHistory.addMessageAssistant(
+            assistantMessage,
+            seal.ext.getStringConfig(ext, "nickname"),
+            seal.ext.getStringConfig(ext, "id"),
+            seal.ext.getIntConfig(ext, "history_length")
+          );
+          rawHistories[ctx.group.groupId]["messages"] = currentHistory.messages;
+          storageSet(ext, "histories", JSON.stringify(rawHistories));
+          seal.replyToSender(ctx, msg, `${seal.ext.getBoolConfig(ext, 'reply') ? `[CQ:reply,id=${userMessageID}]` : ""}${assistantMessage}`);
+          if (!seal.ext.getBoolConfig(ext, "regexp_g")) {
+            break;
+          }
         }
-        currentHistory.addMessageAssistant(
-          assistantMessage,
-          seal.ext.getStringConfig(ext, "nickname"),
-          seal.ext.getStringConfig(ext, "id"),
-          seal.ext.getIntConfig(ext, "history_length")
-        );
-        rawHistories[ctx.group.groupId]["messages"] = currentHistory.messages;
-        storageSet(ext, "histories", JSON.stringify(rawHistories));
-        seal.replyToSender(ctx, msg, `${seal.ext.getBoolConfig(ext, 'reply') ? `[CQ:reply,id=${userMessageID}]` : ""}${assistantMessage}`);
       }
     }
   }
