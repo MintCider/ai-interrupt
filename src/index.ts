@@ -59,8 +59,11 @@ function registerCommand(ext: seal.ExtInfo): void {
     const switches: {
       [key: string]: boolean
     } = JSON.parse(storageGet(ext, "switches"));
+    const rawHistories: {
+      [key: string]: { [key: string]: any[] }
+    } = JSON.parse(storageGet(ext, "histories"));
     switch (command) {
-      case "on":
+      case "on": {
         if (msg.platform !== "QQ" || ctx.isPrivate) {
           seal.replyToSender(ctx, msg, "只能在 QQ 群聊中开启或关闭插嘴功能！");
           return seal.ext.newCmdExecuteResult(true);
@@ -73,7 +76,8 @@ function registerCommand(ext: seal.ExtInfo): void {
         storageSet(ext, "switches", JSON.stringify(switches));
         seal.replyToSender(ctx, msg, "群内 AI 插嘴功能开启了");
         return seal.ext.newCmdExecuteResult(true);
-      case "off":
+      }
+      case "off": {
         if (msg.platform !== "QQ" || ctx.isPrivate) {
           seal.replyToSender(ctx, msg, "只能在 QQ 群聊中开启或关闭插嘴功能！");
           return seal.ext.newCmdExecuteResult(true);
@@ -86,17 +90,16 @@ function registerCommand(ext: seal.ExtInfo): void {
         storageSet(ext, "switches", JSON.stringify(switches));
         seal.replyToSender(ctx, msg, "群内 AI 插嘴功能关闭了");
         return seal.ext.newCmdExecuteResult(true);
-      case "status":
+      }
+      case "status": {
         if (!(ctx.group.groupId in switches) || switches[ctx.group.groupId] === false) {
           seal.replyToSender(ctx, msg, "群内 AI 插嘴功能是关闭状态");
           return seal.ext.newCmdExecuteResult(true);
         }
         seal.replyToSender(ctx, msg, "群内 AI 插嘴功能是开启状态");
         return seal.ext.newCmdExecuteResult(true);
-      case "clear":
-        const rawHistories: {
-          [key: string]: { [key: string]: any[] }
-        } = JSON.parse(storageGet(ext, "histories"));
+      }
+      case "clear": {
         if (!(ctx.group.groupId in rawHistories)) {
           seal.replyToSender(ctx, msg, "暂无本群的聊天记录");
           return seal.ext.newCmdExecuteResult(true);
@@ -107,32 +110,87 @@ function registerCommand(ext: seal.ExtInfo): void {
         }
         const option = cmdArgs.getArgN(2);
         switch (option) {
-          case "all":
+          case "all": {
             delete rawHistories[ctx.group.groupId];
             storageSet(ext, "histories", JSON.stringify(rawHistories));
             seal.replyToSender(ctx, msg, "群内记录的全部聊天内容清除了");
             return seal.ext.newCmdExecuteResult(true);
-          case "users":
+          }
+          case "users": {
             rawHistories[ctx.group.groupId]["messages"] = rawHistories[ctx.group.groupId]["messages"].filter((message) => {
               return message.role !== "user"
             });
             storageSet(ext, "histories", JSON.stringify(rawHistories));
             seal.replyToSender(ctx, msg, "群内记录的用户聊天内容清除了");
             return seal.ext.newCmdExecuteResult(true);
-          case "assistant":
+          }
+          case "assistant": {
             rawHistories[ctx.group.groupId]["messages"] = rawHistories[ctx.group.groupId]["messages"].filter((message) => {
               return message.role !== "assistant"
             });
             storageSet(ext, "histories", JSON.stringify(rawHistories));
             seal.replyToSender(ctx, msg, "群内记录的骰子聊天内容清除了");
             return seal.ext.newCmdExecuteResult(true);
-          default:
+          }
+          default: {
             seal.replyToSender(ctx, msg, "可以使用 .interrupt clear all/users/assistant 清除储存的全部/用户/骰子历史记录");
             return seal.ext.newCmdExecuteResult(true);
+          }
         }
-      default:
+      }
+      case "show": {
+        if (!(ctx.group.groupId in rawHistories)) {
+          seal.replyToSender(ctx, msg, "暂无本群的聊天记录");
+          return seal.ext.newCmdExecuteResult(true);
+        }
+        const num_string = cmdArgs.getArgN(2);
+        if (!num_string.match(/^\d+$/)) {
+          seal.replyToSender(ctx, msg, "请输入有效的数字");
+          return seal.ext.newCmdExecuteResult(true);
+        }
+        const num = Number(num_string);
+        if (num < 1 || num > rawHistories[ctx.group.groupId]["messages"].length) {
+          seal.replyToSender(ctx, msg, "数字超过历史记录范围");
+          return seal.ext.newCmdExecuteResult(true);
+        }
+        seal.replyToSender(ctx, msg, replaceMarker(
+          rawHistories[ctx.group.groupId]["messages"][rawHistories[ctx.group.groupId]["messages"].length - num] === "user" ?
+            seal.ext.getStringConfig(ext, "user_schema") :
+            seal.ext.getStringConfig(ext, "assistant_schema"),
+          rawHistories[ctx.group.groupId]["messages"][rawHistories[ctx.group.groupId]["messages"].length - num].nickname,
+          rawHistories[ctx.group.groupId]["messages"][rawHistories[ctx.group.groupId]["messages"].length - num].id,
+          rawHistories[ctx.group.groupId]["messages"][rawHistories[ctx.group.groupId]["messages"].length - num].content,
+        ));
+        return seal.ext.newCmdExecuteResult(true);
+      }
+      case "delete": {
+        if (!(ctx.group.groupId in rawHistories)) {
+          seal.replyToSender(ctx, msg, "暂无本群的聊天记录");
+          return seal.ext.newCmdExecuteResult(true);
+        }
+        if (ctx.privilegeLevel < seal.ext.getIntConfig(ext, "privilege")) {
+          seal.replyToSender(ctx, msg, "权限不足");
+          return seal.ext.newCmdExecuteResult(true);
+        }
+        const num_string = cmdArgs.getArgN(2);
+        if (!num_string.match(/^\d+$/)) {
+          seal.replyToSender(ctx, msg, "请输入有效的数字");
+          return seal.ext.newCmdExecuteResult(true);
+        }
+        const num = Number(num_string);
+        if (num < 1 || num > rawHistories[ctx.group.groupId]["messages"].length) {
+          seal.replyToSender(ctx, msg, "数字超过历史记录范围");
+          return seal.ext.newCmdExecuteResult(true);
+        }
+        rawHistories[ctx.group.groupId]["messages"].splice(rawHistories[ctx.group.groupId]["messages"].length - num, 1);
+        storageSet(ext, "histories", JSON.stringify(rawHistories));
+        seal.replyToSender(ctx, msg, `倒数第 ${num} 条聊天记录清除了`);
+        return seal.ext.newCmdExecuteResult(true);
+      }
+      default: {
         seal.replyToSender(ctx, msg, "可以使用 .interrupt on/off/status 来开启/关闭/查看 AI 插嘴功能，可以使用 .interrupt clear all/users/assistant 清除储存的全部/用户/骰子历史记录");
         return seal.ext.newCmdExecuteResult(true);
+      }
     }
   }
   ext.cmdMap["interrupt"] = cmdInterrupt;
