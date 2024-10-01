@@ -80,3 +80,10 @@ export class ChatHistory {
     return JSON.stringify(this.buildPrompt(systemPrompt, userSchema, assistantSchema));
   }
 }
+
+export type GroupConfig = {
+  possibility: number | null,
+  historyLength: number | null,
+  triggerLength: number | null,
+  privilege: number | null,
+}
