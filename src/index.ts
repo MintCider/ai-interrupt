@@ -1,4 +1,4 @@
-import {ChatHistory} from "./types";
+import {ChatHistory, GroupConfig} from "./types";
 import {
   replaceCQImage,
   replaceMarker,
@@ -62,13 +62,18 @@ function registerCommand(ext: seal.ExtInfo): void {
     const rawHistories: {
       [key: string]: { [key: string]: any[] }
     } = JSON.parse(storageGet(ext, "histories"));
+    const configs: {
+      [key: string]: GroupConfig
+    } = JSON.parse(storageGet(ext, "configs"));
+    const privilege = configs[ctx.group.groupId] && configs[ctx.group.groupId].privilege ?
+      configs[ctx.group.groupId].privilege : seal.ext.getIntConfig(ext, "privilege");
     switch (command) {
       case "on": {
         if (msg.platform !== "QQ" || ctx.isPrivate) {
           seal.replyToSender(ctx, msg, "只能在 QQ 群聊中开启或关闭插嘴功能！");
           return seal.ext.newCmdExecuteResult(true);
         }
-        if (ctx.privilegeLevel < seal.ext.getIntConfig(ext, "privilege")) {
+        if (ctx.privilegeLevel < privilege) {
           seal.replyToSender(ctx, msg, "权限不足");
           return seal.ext.newCmdExecuteResult(true);
         }
@@ -82,7 +87,7 @@ function registerCommand(ext: seal.ExtInfo): void {
           seal.replyToSender(ctx, msg, "只能在 QQ 群聊中开启或关闭插嘴功能！");
           return seal.ext.newCmdExecuteResult(true);
         }
-        if (ctx.privilegeLevel < seal.ext.getIntConfig(ext, "privilege")) {
+        if (ctx.privilegeLevel < privilege) {
           seal.replyToSender(ctx, msg, "权限不足");
           return seal.ext.newCmdExecuteResult(true);
         }
@@ -104,7 +109,7 @@ function registerCommand(ext: seal.ExtInfo): void {
           seal.replyToSender(ctx, msg, "暂无本群的聊天记录");
           return seal.ext.newCmdExecuteResult(true);
         }
-        if (ctx.privilegeLevel < seal.ext.getIntConfig(ext, "privilege")) {
+        if (ctx.privilegeLevel < privilege) {
           seal.replyToSender(ctx, msg, "权限不足");
           return seal.ext.newCmdExecuteResult(true);
         }
@@ -143,12 +148,12 @@ function registerCommand(ext: seal.ExtInfo): void {
           seal.replyToSender(ctx, msg, "暂无本群的聊天记录");
           return seal.ext.newCmdExecuteResult(true);
         }
-        const num_string = cmdArgs.getArgN(2);
-        if (!num_string.match(/^\d+$/)) {
+        const numStr = cmdArgs.getArgN(2);
+        if (!numStr.match(/^\d+$/)) {
           seal.replyToSender(ctx, msg, "请输入有效的数字");
           return seal.ext.newCmdExecuteResult(true);
         }
-        const num = Number(num_string);
+        const num = Number(numStr);
         if (num < 1 || num > rawHistories[ctx.group.groupId]["messages"].length) {
           seal.replyToSender(ctx, msg, "数字超过历史记录范围");
           return seal.ext.newCmdExecuteResult(true);
@@ -168,16 +173,16 @@ function registerCommand(ext: seal.ExtInfo): void {
           seal.replyToSender(ctx, msg, "暂无本群的聊天记录");
           return seal.ext.newCmdExecuteResult(true);
         }
-        if (ctx.privilegeLevel < seal.ext.getIntConfig(ext, "privilege")) {
+        if (ctx.privilegeLevel < privilege) {
           seal.replyToSender(ctx, msg, "权限不足");
           return seal.ext.newCmdExecuteResult(true);
         }
-        const num_string = cmdArgs.getArgN(2);
-        if (!num_string.match(/^\d+$/)) {
+        const numStr = cmdArgs.getArgN(2);
+        if (!numStr.match(/^\d+$/)) {
           seal.replyToSender(ctx, msg, "请输入有效的数字");
           return seal.ext.newCmdExecuteResult(true);
         }
-        const num = Number(num_string);
+        const num = Number(numStr);
         if (num < 1 || num > rawHistories[ctx.group.groupId]["messages"].length) {
           seal.replyToSender(ctx, msg, "数字超过历史记录范围");
           return seal.ext.newCmdExecuteResult(true);
@@ -185,6 +190,156 @@ function registerCommand(ext: seal.ExtInfo): void {
         rawHistories[ctx.group.groupId]["messages"].splice(rawHistories[ctx.group.groupId]["messages"].length - num, 1);
         storageSet(ext, "histories", JSON.stringify(rawHistories));
         seal.replyToSender(ctx, msg, `倒数第 ${num} 条聊天记录清除了`);
+        return seal.ext.newCmdExecuteResult(true);
+      }
+      case "set": {
+        if (!(ctx.group.groupId in configs)) {
+          configs[ctx.group.groupId] = {
+            possibility: null,
+            historyLength: null,
+            triggerLength: null,
+            privilege: null,
+          };
+        }
+        const config = configs[ctx.group.groupId];
+        const property = cmdArgs.getArgN(2);
+        const numStr = cmdArgs.getArgN(3);
+        switch (property) {
+          case "possibility": {
+            if (ctx.privilegeLevel < privilege) {
+              seal.replyToSender(ctx, msg, "权限不足");
+              return seal.ext.newCmdExecuteResult(true);
+            }
+            if (!numStr.match(/^(0.\d+|[01])$/)) {
+              seal.replyToSender(ctx, msg, "请输入 [0, 1] 范围内的有效的数字");
+              return seal.ext.newCmdExecuteResult(true);
+            }
+            config.possibility = Number(numStr);
+            break;
+          }
+          case "history_length": {
+            if (ctx.privilegeLevel < privilege) {
+              seal.replyToSender(ctx, msg, "权限不足");
+              return seal.ext.newCmdExecuteResult(true);
+            }
+            if (!numStr.match(/^\d+$/)) {
+              seal.replyToSender(ctx, msg, "请输入有效的数字");
+              return seal.ext.newCmdExecuteResult(true);
+            }
+            config.historyLength = Number(numStr);
+            break;
+          }
+          case "trigger_length": {
+            if (ctx.privilegeLevel < privilege) {
+              seal.replyToSender(ctx, msg, "权限不足");
+              return seal.ext.newCmdExecuteResult(true);
+            }
+            if (!numStr.match(/^\d+$/)) {
+              seal.replyToSender(ctx, msg, "请输入有效的数字");
+              return seal.ext.newCmdExecuteResult(true);
+            }
+            config.triggerLength = Number(numStr);
+            break;
+          }
+          case "privilege": {
+            if (ctx.privilegeLevel < seal.ext.getIntConfig(ext, "privilege")) {
+              seal.replyToSender(ctx, msg, "权限不足");
+              return seal.ext.newCmdExecuteResult(true);
+            }
+            if (!numStr.match(/^\d+$/)) {
+              seal.replyToSender(ctx, msg, "请输入有效的数字");
+              return seal.ext.newCmdExecuteResult(true);
+            }
+            config.privilege = Number(numStr);
+            break;
+          }
+          default: {
+            seal.replyToSender(ctx, msg, "请输入有效属性：possibility、history_length、trigger_length 或 privilege");
+            return seal.ext.newCmdExecuteResult(true);
+          }
+        }
+        storageSet(ext, "configs", JSON.stringify(configs));
+        seal.replyToSender(ctx, msg, `群聊内 ${property} 属性已修改为 ${numStr}`);
+        return seal.ext.newCmdExecuteResult(true);
+      }
+      case "unset": {
+        if (!(ctx.group.groupId in configs)) {
+          seal.replyToSender(ctx, msg, `群聊内未设置特殊属性`);
+          return seal.ext.newCmdExecuteResult(true);
+        }
+        const config = configs[ctx.group.groupId];
+        const property = cmdArgs.getArgN(2);
+        switch (property) {
+          case "possibility": {
+            if (ctx.privilegeLevel < privilege) {
+              seal.replyToSender(ctx, msg, "权限不足");
+              return seal.ext.newCmdExecuteResult(true);
+            }
+            if (config.possibility) {
+              config.possibility = null;
+              seal.replyToSender(ctx, msg, `群聊内 ${property} 属性已恢复默认`);
+            } else {
+              seal.replyToSender(ctx, msg, `群聊内未设置 ${property} 属性`);
+            }
+            break;
+          }
+          case "history_length": {
+            if (ctx.privilegeLevel < privilege) {
+              seal.replyToSender(ctx, msg, "权限不足");
+              return seal.ext.newCmdExecuteResult(true);
+            }
+            if (config.historyLength) {
+              config.historyLength = null;
+              seal.replyToSender(ctx, msg, `群聊内 ${property} 属性已恢复默认`);
+            } else {
+              seal.replyToSender(ctx, msg, `群聊内未设置 ${property} 属性`);
+            }
+            break;
+          }
+          case "trigger_length": {
+            if (ctx.privilegeLevel < privilege) {
+              seal.replyToSender(ctx, msg, "权限不足");
+              return seal.ext.newCmdExecuteResult(true);
+            }
+            if (config.triggerLength) {
+              config.triggerLength = null;
+              seal.replyToSender(ctx, msg, `群聊内 ${property} 属性已恢复默认`);
+            } else {
+              seal.replyToSender(ctx, msg, `群聊内未设置 ${property} 属性`);
+            }
+            break;
+          }
+          case "privilege": {
+            if (ctx.privilegeLevel < seal.ext.getIntConfig(ext, "privilege")) {
+              seal.replyToSender(ctx, msg, "权限不足");
+              return seal.ext.newCmdExecuteResult(true);
+            }
+            if (config.privilege) {
+              config.privilege = null;
+              seal.replyToSender(ctx, msg, `群聊内 ${property} 属性已恢复默认`);
+            } else {
+              seal.replyToSender(ctx, msg, `群聊内未设置 ${property} 属性`);
+            }
+            break;
+          }
+          case "all": {
+            if (ctx.privilegeLevel < seal.ext.getIntConfig(ext, "privilege")) {
+              seal.replyToSender(ctx, msg, "权限不足");
+              return seal.ext.newCmdExecuteResult(true);
+            }
+            delete configs[ctx.group.groupId];
+            seal.replyToSender(ctx, msg, `群聊内全部属性已恢复默认`);
+            break;
+          }
+          default: {
+            seal.replyToSender(ctx, msg, "请输入有效属性：possibility、history_length、trigger_length 或 privilege");
+            return seal.ext.newCmdExecuteResult(true);
+          }
+        }
+        if (!(config.possibility || config.historyLength || config.triggerLength || config.privilege)) {
+          delete configs[ctx.group.groupId];
+        }
+        storageSet(ext, "configs", JSON.stringify(configs));
         return seal.ext.newCmdExecuteResult(true);
       }
       default: {
@@ -244,7 +399,18 @@ function main() {
         rawHistories[ctx.group.groupId] = {};
       }
 
-      // Check configs' validity
+      // Load group configs
+      const configs: {
+        [key: string]: GroupConfig
+      } = JSON.parse(storageGet(ext, "configs"));
+      const possibility = configs[ctx.group.groupId] && configs[ctx.group.groupId].possibility ?
+        configs[ctx.group.groupId].possibility : seal.ext.getFloatConfig(ext, "possibility");
+      const historyLength = configs[ctx.group.groupId] && configs[ctx.group.groupId].historyLength ?
+        configs[ctx.group.groupId].historyLength : seal.ext.getIntConfig(ext, "history_length");
+      const triggerLength = configs[ctx.group.groupId] && configs[ctx.group.groupId].triggerLength ?
+        configs[ctx.group.groupId].triggerLength : seal.ext.getIntConfig(ext, "trigger_length");
+
+      // Check global configs' validity
       let missingConfig = "";
       if (!seal.ext.getStringConfig(ext, "nickname")) {
         valid = false;
@@ -290,7 +456,7 @@ function main() {
           seal.ext.getBoolConfig(ext, "debug_resp")
         )
       }
-      currentHistory.addMessageUser(userMessage, msg.sender.nickname, msg.sender.userId.slice(3), seal.ext.getIntConfig(ext, "history_length"));
+      currentHistory.addMessageUser(userMessage, msg.sender.nickname, msg.sender.userId.slice(3), historyLength);
       rawHistories[ctx.group.groupId]["messages"] = currentHistory.messages;
       storageSet(ext, "histories", JSON.stringify(rawHistories));
       let at = false;
@@ -299,8 +465,8 @@ function main() {
       }
       // Check reply condition
       if (at || (
-        currentHistory.getLength() >= seal.ext.getIntConfig(ext, "trigger_length")
-        && Math.random() < seal.ext.getFloatConfig(ext, "possibility")
+        currentHistory.getLength() >= triggerLength
+        && Math.random() < possibility
       )) {
         if (seal.ext.getBoolConfig(ext, "debug_prompt")) {
           console.log(currentHistory.buildPromptString(
@@ -316,21 +482,21 @@ function main() {
         const resp = seal.ext.getBoolConfig(ext, "mock_api") ?
           seal.ext.getStringConfig(ext, "mock_api_text") :
           await requestAPI(
-          currentHistory.buildPrompt(
-            replaceMarker(
-              seal.ext.getStringConfig(ext, "system_schema"),
-              seal.ext.getStringConfig(ext, "nickname"),
-              seal.ext.getStringConfig(ext, "id"),
-              ""
+            currentHistory.buildPrompt(
+              replaceMarker(
+                seal.ext.getStringConfig(ext, "system_schema"),
+                seal.ext.getStringConfig(ext, "nickname"),
+                seal.ext.getStringConfig(ext, "id"),
+                ""
+              ),
+              seal.ext.getStringConfig(ext, "user_schema"),
+              seal.ext.getStringConfig(ext, "assistant_schema")
             ),
-            seal.ext.getStringConfig(ext, "user_schema"),
-            seal.ext.getStringConfig(ext, "assistant_schema")
-          ),
-          seal.ext.getStringConfig(ext, "request_URL"), seal.ext.getStringConfig(ext, "key"),
-          seal.ext.getStringConfig(ext, "model"), seal.ext.getIntConfig(ext, "max_tokens"),
-          seal.ext.getFloatConfig(ext, "temperature"), seal.ext.getFloatConfig(ext, "top_p"),
-          seal.ext.getBoolConfig(ext, "debug_resp")
-        );
+            seal.ext.getStringConfig(ext, "request_URL"), seal.ext.getStringConfig(ext, "key"),
+            seal.ext.getStringConfig(ext, "model"), seal.ext.getIntConfig(ext, "max_tokens"),
+            seal.ext.getFloatConfig(ext, "temperature"), seal.ext.getFloatConfig(ext, "top_p"),
+            seal.ext.getBoolConfig(ext, "debug_resp")
+          );
         const retrieveMatchExpr = new RegExp(replaceMarker(
           seal.ext.getStringConfig(ext, "retrieve_schema"),
           seal.ext.getStringConfig(ext, "nickname"),
@@ -348,7 +514,7 @@ function main() {
             assistantMessage,
             seal.ext.getStringConfig(ext, "nickname"),
             seal.ext.getStringConfig(ext, "id"),
-            seal.ext.getIntConfig(ext, "history_length")
+            historyLength
           );
           rawHistories[ctx.group.groupId]["messages"] = currentHistory.messages;
           storageSet(ext, "histories", JSON.stringify(rawHistories));
