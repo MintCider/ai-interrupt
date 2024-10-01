@@ -12,7 +12,7 @@ function registerConfigs(ext: seal.ExtInfo): void {
   seal.ext.registerFloatConfig(ext, "possibility", 0.05, "插嘴的概率");
   seal.ext.registerIntConfig(ext, "history_length", 50, "历史记录保存的最大长度");
   seal.ext.registerIntConfig(ext, "trigger_length", 25, "允许触发插嘴的最小历史记录长度");
-  seal.ext.registerIntConfig(ext, "privilege", 0, "开启关闭插件所需的权限等级");
+  seal.ext.registerIntConfig(ext, "privilege", 0, "执行特定命令所需的权限等级");
   seal.ext.registerStringConfig(ext, "nickname", "", "骰子昵称");
   seal.ext.registerStringConfig(ext, "id", "", "骰子 QQ 号");
   seal.ext.registerBoolConfig(ext, "react_at", true, "被 @ 时是否必定回复（无论历史记录长短）");
@@ -46,8 +46,8 @@ function registerConfigs(ext: seal.ExtInfo): void {
   seal.ext.registerIntConfig(ext, "max_tokens", 200, "文本大模型最大生成长度");
   seal.ext.registerFloatConfig(ext, "temperature", -1);
   seal.ext.registerFloatConfig(ext, "top_p", -1);
-  seal.ext.registerBoolConfig(ext, "mock_api", false, "开启此选项后，将不会实际请求 API，并使用下方的测试文本作为 API 回复");
-  seal.ext.registerStringConfig(ext, "mock_api_text", "", "假请求的回复文本");
+  seal.ext.registerBoolConfig(ext, "mock_resp", false, "不再请求 API 并使用下方的测试文本作为 API 回复");
+  seal.ext.registerStringConfig(ext, "mock_resp_text", "", "假响应的回复文本");
 }
 
 function registerCommand(ext: seal.ExtInfo): void {
@@ -355,7 +355,7 @@ function main() {
   // 注册扩展
   let ext = seal.ext.find("ai-interrupt");
   if (!ext) {
-    ext = seal.ext.new("ai-interrupt", "MintCider", "0.2.0");
+    ext = seal.ext.new("ai-interrupt", "MintCider", "0.3.0");
 
     registerCommand(ext);
     seal.ext.register(ext);
@@ -479,8 +479,8 @@ function main() {
             seal.ext.getStringConfig(ext, "user_schema"),
             seal.ext.getStringConfig(ext, "assistant_schema")));
         }
-        const resp = seal.ext.getBoolConfig(ext, "mock_api") ?
-          seal.ext.getStringConfig(ext, "mock_api_text") :
+        const resp = seal.ext.getBoolConfig(ext, "mock_resp") ?
+          seal.ext.getStringConfig(ext, "mock_resp_text") :
           await requestAPI(
             currentHistory.buildPrompt(
               replaceMarker(
