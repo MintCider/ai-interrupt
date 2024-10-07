@@ -355,7 +355,7 @@ function main() {
   // 注册扩展
   let ext = seal.ext.find("ai-interrupt");
   if (!ext) {
-    ext = seal.ext.new("ai-interrupt", "MintCider", "0.3.0");
+    ext = seal.ext.new("ai-interrupt", "Mint Cider", "0.3.0");
 
     registerCommand(ext);
     seal.ext.register(ext);

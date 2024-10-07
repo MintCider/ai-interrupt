@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         AI 插嘴
-// @author       MintCider
+// @author       Mint Cider
 // @version      0.3.0
 // @description  接入 AI 并随机插嘴。详细使用说明见项目主页 README。
 // @timestamp    1727776200
