@@ -25,6 +25,9 @@ export async function requestAPI(prompt: PromptMessage[] | ImagePromptMessage[],
   });
 
   if (!response.ok) {
+    if (printLog) {
+      console.log(`ai-interrupt: Failed to request API: HTTP ${response.status}: ${response.statusText}`);
+    }
     return null
   }
 

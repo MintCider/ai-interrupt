@@ -1,16 +1,16 @@
 // ==UserScript==
 // @name         AI 插嘴
 // @author       Mint Cider
-// @version      0.3.0
+// @version      0.3.1
 // @description  接入 AI 并随机插嘴。详细使用说明见项目主页 README。
-// @timestamp    1727776200
+// @timestamp    1730561800
 // @license      MIT
 // @homepageURL  https://github.com/MintCider/ai-interrupt
 // @updateUrl    https://github.com/MintCider/ai-interrupt/releases/latest/download/ai-interrupt.js
-// @sealVersion  1.4.6
+// @sealVersion  >=1.4.6-0
 // ==/UserScript==
 
-// # v0.3.0 更新日志
+// # v0.3.1 更新日志
 //
 // ## ⚠️注意⚠️
 //
@@ -18,15 +18,4 @@
 //
 // ## 功能
 //
-// - 调用文本大模型时，支持解析多行回复。
-// - 新增「假响应」功能，支持使用假回复调试正则表达式而不实际请求 API。
-// - 新增 `show` 命令，允许通过序号查询历史记录中的特定消息。
-// - 新增 `delete` 命令，允许通过序号删除历史记录中的特定消息。
-// - 新增 `set` 命令，允许在群聊中设定部分不同于默认配置的属性。
-// - 新增 `unset` 命令，允许在群聊中将部分属性恢复默认。
-//
-// 请参考 README 使用以上新增功能。
-//
-// ## 修复
-//
-// - 修复部分格式的图片 CQ 码 URL 解析不正确的问题。
+// - 当请求 API 发生错误时，如果开启了「打印 API Response 日志」配置项，将会打印 HTTP 状态码。
