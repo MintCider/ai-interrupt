@@ -1,27 +1,44 @@
 import {ImagePromptMessage, PromptMessage} from "./types";
 
-export async function requestAPI(prompt: PromptMessage[] | ImagePromptMessage[], URL: string, key: string, model: string, maxTokens: number, temperature: number, topP: number, printLog: boolean): Promise<string | null> {
+export function bodyBuilder(prompt: PromptMessage[] | ImagePromptMessage[], customBody: boolean, customBodyText: string, model: string, maxTokens: number, temperature: number, topP: number): any | null {
+  let postBody: any;
+  if (customBody) {
+    try {
+      postBody = JSON.parse(customBodyText);
+    } catch (e) {
+      console.log(`ai-interrupt: Failed to parse custom body: ${e}`);
+      return null;
+    }
+  } else {
+    postBody = {
+      "model": model,
+      "max_tokens": maxTokens,
+    };
+    if (temperature >= 0 && temperature <= 1) {
+      postBody["temperature"] = temperature;
+    }
+    if (topP >= 0 && topP <= 1) {
+      postBody["top_p"] = topP;
+    }
+  }
+  postBody["messages"] = prompt;
+  return postBody;
+}
+
+export async function requestAPI(URL: string, key: string, reqBody: any | null, printLog: boolean): Promise<string | null> {
+  if (reqBody === null) {
+    return null;
+  }
+
   const header = {
     "Content-Type": "application/json",
     "Authorization": `Bearer ${key}`
   };
 
-  let postDict = {
-    "model": model,
-    "messages": prompt,
-    "max_tokens": maxTokens,
-  };
-  if (temperature >= 0 && temperature <= 1) {
-    postDict["temperature"] = temperature;
-  }
-  if (topP >= 0 && topP <= 1) {
-    postDict["top_p"] = topP;
-  }
-
   const response = await fetch(URL, {
     method: "POST",
     headers: header,
-    body: JSON.stringify(postDict),
+    body: JSON.stringify(reqBody),
   });
 
   if (!response.ok) {
@@ -88,7 +105,9 @@ export async function replaceCQImage(raw: string, systemPrompt: string, URL: str
       if (debugPrompt) {
         console.log(JSON.stringify(buildImagePrompt(capture, systemPrompt)));
       }
-      const resp = await requestAPI(buildImagePrompt(capture, systemPrompt), URL, key, model, maxTokens, temperature, topP, debugResp);
+      const resp = await requestAPI(URL, key, bodyBuilder(
+        buildImagePrompt(capture, systemPrompt), false, "", model, maxTokens, temperature, topP
+      ), debugResp);
       if (!resp) {
         return null;
       }

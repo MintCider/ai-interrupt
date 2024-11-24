@@ -1,21 +1,18 @@
 // ==UserScript==
 // @name         AI 插嘴
 // @author       Mint Cider
-// @version      0.3.1
+// @version      0.4.0
 // @description  接入 AI 并随机插嘴。详细使用说明见项目主页 README。
-// @timestamp    1730561800
+// @timestamp    1732461200
 // @license      MIT
 // @homepageURL  https://github.com/MintCider/ai-interrupt
 // @updateUrl    https://github.com/MintCider/ai-interrupt/releases/latest/download/ai-interrupt.js
 // @sealVersion  >=1.4.6-0
 // ==/UserScript==
 
-// # v0.3.1 更新日志
-//
-// ## ⚠️注意⚠️
-//
-// 由于数据存储格式发生变动，从 `v0.1.0` 之前版本升级而来的话，会出现数据不匹配。可以通过 `.interrupt clear all` 清除旧数据。
+// # v0.4.0 更新日志
 //
 // ## 功能
 //
-// - 当请求 API 发生错误时，如果开启了「打印 API Response 日志」配置项，将会打印 HTTP 状态码。
+// - 新增「是否为文本大模型提供系统提示」开关，在请求特定模型时，可以按需关闭系统提示。
+// - 新增「自定义 API 请求体」功能，在请求特定模型时，可以按需自定义请求体。详情请见 README 中相关配置项的说明。

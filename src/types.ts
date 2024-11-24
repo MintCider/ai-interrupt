@@ -58,8 +58,8 @@ export class ChatHistory {
     return this.messages.length;
   }
 
-  buildPrompt(systemPrompt: string, userSchema: string, assistantSchema: string): PromptMessage[] {
-    const prompt: PromptMessage[] = [{role: "system", content: systemPrompt}];
+  buildPrompt(systemPromptSwitch: boolean, systemPrompt: string, userSchema: string, assistantSchema: string): PromptMessage[] {
+    const prompt: PromptMessage[] = systemPromptSwitch ? [{role: "system", content: systemPrompt}] : [];
     let content: string = "";
 
     for (const message of this.messages) {
@@ -74,10 +74,6 @@ export class ChatHistory {
     prompt.push({role: "user", content});
 
     return prompt;
-  }
-
-  buildPromptString(systemPrompt: string, userSchema: string, assistantSchema: string): string {
-    return JSON.stringify(this.buildPrompt(systemPrompt, userSchema, assistantSchema));
   }
 }
 

@@ -1,5 +1,6 @@
 import {ChatHistory, GroupConfig} from "./types";
 import {
+  bodyBuilder,
   replaceCQImage,
   replaceMarker,
   requestAPI,
@@ -29,6 +30,7 @@ function registerConfigs(ext: seal.ExtInfo): void {
   seal.ext.registerFloatConfig(ext, "image_temperature", -1);
   seal.ext.registerFloatConfig(ext, "image_top_p", -1);
   seal.ext.registerStringConfig(ext, "---------------------------- 文本大模型设置 ----------------------------", "本配置项无实际意义");
+  seal.ext.registerBoolConfig(ext, "system_schema_switch", true, "是否为文本大模型提供系统提示");
   seal.ext.registerStringConfig(ext, "system_schema",
     "你是一个工作在群聊中的机器人，你叫<nickname>，id为<id>。你工作在群聊中。接下来你会收到一系列消息，来自不同的用户和你自己。首先，你应该判断现在是否适合插话，如果不适合，请直接回复「无」。如果适合，你应该如此插话：\n" +
     "\n" +
@@ -46,6 +48,11 @@ function registerConfigs(ext: seal.ExtInfo): void {
   seal.ext.registerIntConfig(ext, "max_tokens", 200, "文本大模型最大生成长度");
   seal.ext.registerFloatConfig(ext, "temperature", -1);
   seal.ext.registerFloatConfig(ext, "top_p", -1);
+  seal.ext.registerBoolConfig(ext, "custom_request_body", false, '是否使用自定义 API 请求体，开启后除注入 "message" 外，不再注入其他参数');
+  seal.ext.registerStringConfig(ext, "custom_request_body_text", '{\n' +
+    '    "model": "charglm-3",\n' +
+    '    "max_tokens": 200\n' +
+    '}', '自定义 API 请求体，在此基础上注入 "message"，请注意 JSON 格式');
   seal.ext.registerBoolConfig(ext, "mock_resp", false, "不再请求 API 并使用下方的测试文本作为 API 回复");
   seal.ext.registerStringConfig(ext, "mock_resp_text", "", "假响应的回复文本");
 }
@@ -355,7 +362,7 @@ function main() {
   // 注册扩展
   let ext = seal.ext.find("ai-interrupt");
   if (!ext) {
-    ext = seal.ext.new("ai-interrupt", "Mint Cider", "0.3.1");
+    ext = seal.ext.new("ai-interrupt", "Mint Cider", "0.4.0");
 
     registerCommand(ext);
     seal.ext.register(ext);
@@ -468,8 +475,9 @@ function main() {
         currentHistory.getLength() >= triggerLength
         && Math.random() < possibility
       )) {
-        if (seal.ext.getBoolConfig(ext, "debug_prompt")) {
-          console.log(currentHistory.buildPromptString(
+        const reqBody = bodyBuilder(
+          currentHistory.buildPrompt(
+            seal.ext.getBoolConfig(ext, "system_schema_switch"),
             replaceMarker(
               seal.ext.getStringConfig(ext, "system_schema"),
               seal.ext.getStringConfig(ext, "nickname"),
@@ -477,24 +485,19 @@ function main() {
               ""
             ),
             seal.ext.getStringConfig(ext, "user_schema"),
-            seal.ext.getStringConfig(ext, "assistant_schema")));
+            seal.ext.getStringConfig(ext, "assistant_schema")
+          ),
+          seal.ext.getBoolConfig(ext, "custom_request_body"), seal.ext.getStringConfig(ext, "custom_request_body_text"),
+          seal.ext.getStringConfig(ext, "model"), seal.ext.getIntConfig(ext, "max_tokens"),
+          seal.ext.getFloatConfig(ext, "temperature"), seal.ext.getFloatConfig(ext, "top_p"),
+        );
+        if (seal.ext.getBoolConfig(ext, "debug_prompt")) {
+          console.log(JSON.stringify(reqBody));
         }
         const resp = seal.ext.getBoolConfig(ext, "mock_resp") ?
           seal.ext.getStringConfig(ext, "mock_resp_text") :
-          await requestAPI(
-            currentHistory.buildPrompt(
-              replaceMarker(
-                seal.ext.getStringConfig(ext, "system_schema"),
-                seal.ext.getStringConfig(ext, "nickname"),
-                seal.ext.getStringConfig(ext, "id"),
-                ""
-              ),
-              seal.ext.getStringConfig(ext, "user_schema"),
-              seal.ext.getStringConfig(ext, "assistant_schema")
-            ),
-            seal.ext.getStringConfig(ext, "request_URL"), seal.ext.getStringConfig(ext, "key"),
-            seal.ext.getStringConfig(ext, "model"), seal.ext.getIntConfig(ext, "max_tokens"),
-            seal.ext.getFloatConfig(ext, "temperature"), seal.ext.getFloatConfig(ext, "top_p"),
+          await requestAPI(seal.ext.getStringConfig(ext, "request_URL"), seal.ext.getStringConfig(ext, "key"),
+            reqBody,
             seal.ext.getBoolConfig(ext, "debug_resp")
           );
         const retrieveMatchExpr = new RegExp(replaceMarker(
