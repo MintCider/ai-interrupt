@@ -58,9 +58,9 @@ export class ChatHistory {
     return this.messages.length;
   }
 
-  buildPrompt(systemPromptSwitch: boolean, systemPrompt: string, userSchema: string, assistantSchema: string): PromptMessage[] {
+  buildPrompt(systemPromptSwitch: boolean, systemPrompt: string, userSchema: string, assistantSchema: string, multiTurn: boolean): PromptMessage[] {
     const prompt: PromptMessage[] = systemPromptSwitch ? [{role: "system", content: systemPrompt}] : [];
-    let content: string = "";
+    let combinedContent: string = "";
 
     for (const message of this.messages) {
       const parsedMessage = replaceMarker(
@@ -69,9 +69,14 @@ export class ChatHistory {
         message.id,
         message.content,
       );
-      content = content + parsedMessage + "\n";
+      combinedContent = combinedContent + parsedMessage + "\n";
+      if (multiTurn) {
+        prompt.push({role: message.role, content: parsedMessage});
+      }
     }
-    prompt.push({role: "user", content});
+    if (!multiTurn) {
+      prompt.push({role: "user", content: combinedContent});
+    }
 
     return prompt;
   }

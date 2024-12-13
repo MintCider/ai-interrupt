@@ -31,6 +31,7 @@ function registerConfigs(ext: seal.ExtInfo): void {
   seal.ext.registerFloatConfig(ext, "image_top_p", -1);
   seal.ext.registerStringConfig(ext, "---------------------------- 文本大模型设置 ----------------------------", "本配置项无实际意义");
   seal.ext.registerBoolConfig(ext, "system_schema_switch", true, "是否为文本大模型提供系统提示");
+  seal.ext.registerBoolConfig(ext, "multi_turn", false, "以多轮对话的形式请求 API");
   seal.ext.registerStringConfig(ext, "system_schema",
     "你是一个工作在群聊中的机器人，你叫<nickname>，id为<id>。你工作在群聊中。接下来你会收到一系列消息，来自不同的用户和你自己。首先，你应该判断现在是否适合插话，如果不适合，请直接回复「无」。如果适合，你应该如此插话：\n" +
     "\n" +
@@ -485,7 +486,8 @@ function main() {
               ""
             ),
             seal.ext.getStringConfig(ext, "user_schema"),
-            seal.ext.getStringConfig(ext, "assistant_schema")
+            seal.ext.getStringConfig(ext, "assistant_schema"),
+            seal.ext.getBoolConfig(ext, "multi_turn")
           ),
           seal.ext.getBoolConfig(ext, "custom_request_body"), seal.ext.getStringConfig(ext, "custom_request_body_text"),
           seal.ext.getStringConfig(ext, "model"), seal.ext.getIntConfig(ext, "max_tokens"),
