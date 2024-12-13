@@ -88,7 +88,7 @@ export function handleShow(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Me
   }
   const num = Number(numStr);
   if (num < 1 || num > rawHistories[ctx.group.groupId]["messages"].length) {
-    seal.replyToSender(ctx, msg, "数字超过历史记录范围");
+    seal.replyToSender(ctx, msg, "数字超过现有历史记录范围");
     return seal.ext.newCmdExecuteResult(true);
   }
   seal.replyToSender(ctx, msg, replaceMarker(
@@ -113,7 +113,7 @@ export function handleDelete(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.
   }
   const num = Number(numStr);
   if (num < 1 || num > rawHistories[ctx.group.groupId]["messages"].length) {
-    seal.replyToSender(ctx, msg, "数字超过历史记录范围");
+    seal.replyToSender(ctx, msg, "数字超过现有历史记录范围");
     return seal.ext.newCmdExecuteResult(true);
   }
   rawHistories[ctx.group.groupId]["messages"].splice(rawHistories[ctx.group.groupId]["messages"].length - num, 1);
