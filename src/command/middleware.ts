@@ -1,5 +1,5 @@
 import {Option} from "./dispatcher";
-import {GroupConfig} from "../model";
+import {GroupConfig, GroupMemory} from "../model";
 import {storageGet} from "../util";
 
 export function checkPlatform(_ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Message, _option: Option): [boolean, string] {
@@ -29,12 +29,37 @@ export function checkPrivilege(ext: seal.ExtInfo, ctx: seal.MsgContext, _msg: se
   return [true, ""];
 }
 
-export function checkHistory(ext: seal.ExtInfo, ctx: seal.MsgContext, _msg: seal.Message, _option: object | null): [boolean, string] {
+export function checkData(ext: seal.ExtInfo, ctx: seal.MsgContext, _msg: seal.Message, option: Option): [boolean, string] {
+  const dataType = option.checkData.dataType;
   const rawHistories: {
     [key: string]: { [key: string]: any[] }
   } = JSON.parse(storageGet(ext, "histories"));
-  if (!(ctx.group.groupId in rawHistories)) {
-    return [false, "暂无本群的聊天记录"];
+  const memories: {
+    [key: string]: GroupMemory
+  } = JSON.parse(storageGet(ext, "memories"));
+  let historyExists = false;
+  let memoryExists = false;
+  if (ctx.group.groupId in rawHistories && rawHistories[ctx.group.groupId]["messages"].length > 0) {
+    historyExists = true;
   }
-  return [true, ""];
+  if (ctx.group.groupId in memories && memories[ctx.group.groupId].length > 0) {
+    memoryExists = true;
+  }
+  switch (dataType) {
+    case "history": {
+      if (!historyExists) {
+        return [false, "暂无本群的聊天记录"];
+      }
+      return [true, ""];
+    }
+    case "memory": {
+      if (!memoryExists) {
+        return [false, "本群中暂无记忆"];
+      }
+      return [true, ""];
+    }
+    default: {
+      return [false, "插件内部错误：checkData：未知的数据类型：" + dataType];
+    }
+  }
 }

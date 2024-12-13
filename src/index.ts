@@ -10,9 +10,9 @@ import {
 import {helpStr} from "./data";
 import {setCommand, dispatcher} from "./command/dispatcher";
 import {
+  genClearShowDeleteOption,
   genDefaultOption,
-  genSetOption,
-  genUnsetOption,
+  genSetUnsetOption,
   handleClear,
   handleDelete,
   handleOff,
@@ -23,7 +23,7 @@ import {
   handleUnset
 } from "./command/handler";
 import {
-  checkHistory,
+  checkData,
   checkPlatform,
   checkPrivilege
 } from "./command/middleware";
@@ -91,11 +91,11 @@ function registerCommand(ext: seal.ExtInfo): void {
   setCommand("on", handleOn, [checkPlatform, checkPrivilege], genDefaultOption);
   setCommand("off", handleOff, [checkPlatform, checkPrivilege], genDefaultOption);
   setCommand("status", handleStatus);
-  setCommand("clear", handleClear, [checkPlatform, checkHistory, checkPrivilege], genDefaultOption);
-  setCommand("show", handleShow, [checkPlatform, checkHistory]);
-  setCommand("delete", handleDelete, [checkPlatform, checkHistory, checkPrivilege], genDefaultOption);
-  setCommand("set", handleSet, [checkPlatform, checkPrivilege], genSetOption);
-  setCommand("unset", handleUnset, [checkPlatform, checkPrivilege], genUnsetOption);
+  setCommand("clear", handleClear, [checkPlatform, checkData, checkPrivilege], genClearShowDeleteOption);
+  setCommand("show", handleShow, [checkPlatform, checkData], genClearShowDeleteOption);
+  setCommand("delete", handleDelete, [checkPlatform, checkData, checkPrivilege], genClearShowDeleteOption);
+  setCommand("set", handleSet, [checkPlatform, checkPrivilege], genSetUnsetOption);
+  setCommand("unset", handleUnset, [checkPlatform, checkPrivilege], genSetUnsetOption);
   ext.cmdMap["interrupt"] = cmdInterrupt;
 }
 

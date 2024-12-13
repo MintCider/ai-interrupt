@@ -1,11 +1,69 @@
 import {Option} from "./dispatcher";
 import {replaceMarker, storageGet, storageSet} from "../util";
-import {GroupConfig} from "../model";
+import {GroupConfig, GroupMemory} from "../model";
+
+export function genNullOption(_ext: seal.ExtInfo, _ctx: seal.MsgContext, _msg: seal.Message, _cmdArgs: seal.CmdArgs): Option {
+  return {
+    checkPrivilege: {
+      privilegeType: null
+    },
+    checkData: {
+      dataType: null
+    }
+  }
+}
 
 export function genDefaultOption(_ext: seal.ExtInfo, _ctx: seal.MsgContext, _msg: seal.Message, _cmdArgs: seal.CmdArgs): Option {
   return {
     checkPrivilege: {
       privilegeType: "group"
+    },
+    checkData: {
+      dataType: "history"
+    }
+  }
+}
+
+export function genClearShowDeleteOption(_ext: seal.ExtInfo, _ctx: seal.MsgContext, _msg: seal.Message, cmdArgs: seal.CmdArgs): Option {
+  if (cmdArgs.getArgN(2) === "memory") {
+    return {
+      checkPrivilege: {
+        privilegeType: "group"
+      },
+      checkData: {
+        dataType: "memory"
+      }
+    }
+  } else {
+    return {
+      checkPrivilege: {
+        privilegeType: "group"
+      },
+      checkData: {
+        dataType: "history"
+      }
+    }
+  }
+}
+
+export function genSetUnsetOption(_ext: seal.ExtInfo, _ctx: seal.MsgContext, _msg: seal.Message, cmdArgs: seal.CmdArgs): Option {
+  if (cmdArgs.getArgN(2) === "privilege" || cmdArgs.getArgN(2) === "all") {
+    return {
+      checkPrivilege: {
+        privilegeType: "origin"
+      },
+      checkData: {
+        dataType: null
+      }
+    }
+  } else {
+    return {
+      checkPrivilege: {
+        privilegeType: "group"
+      },
+      checkData: {
+        dataType: null
+      }
     }
   }
 }
@@ -46,6 +104,9 @@ export function handleClear(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.M
   const rawHistories: {
     [key: string]: { [key: string]: any[] }
   } = JSON.parse(storageGet(ext, "histories"));
+  const memories: {
+    [key: string]: GroupMemory
+  } = JSON.parse(storageGet(ext, "memories"));
   const option = cmdArgs.getArgN(2);
   switch (option) {
     case "all": {
@@ -70,8 +131,15 @@ export function handleClear(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.M
       seal.replyToSender(ctx, msg, "群内记录的骰子聊天内容清除了");
       return seal.ext.newCmdExecuteResult(true);
     }
+    case "memory": {
+      delete memories[ctx.group.groupId];
+      storageSet(ext, "memories", JSON.stringify(memories));
+      seal.replyToSender(ctx, msg, "群内全部记忆清除了");
+      return seal.ext.newCmdExecuteResult(true);
+    }
     default: {
-      seal.replyToSender(ctx, msg, "可以使用 .interrupt clear all/users/assistant 清除储存的全部/用户/骰子历史记录");
+      seal.replyToSender(ctx, msg, "可以使用 .interrupt clear all/users/assistant 清除储存的全部/用户/骰子历史记录\n" +
+        "可以使用 .interrupt clear memory 清除储存的全部记忆");
       return seal.ext.newCmdExecuteResult(true);
     }
   }
@@ -81,45 +149,78 @@ export function handleShow(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Me
   const rawHistories: {
     [key: string]: { [key: string]: any[] }
   } = JSON.parse(storageGet(ext, "histories"));
-  const numStr = cmdArgs.getArgN(2);
-  if (!numStr.match(/^\d+$/)) {
-    seal.replyToSender(ctx, msg, "请输入有效的数字");
+  const memories: {
+    [key: string]: GroupMemory
+  } = JSON.parse(storageGet(ext, "memories"));
+  if (cmdArgs.getArgN(2) === "memory") {
+    let result = ""
+    for (let i = 0; i < memories[ctx.group.groupId].length; i++) {
+      result += `${i + 1}. ${memories[ctx.group.groupId][i]}\n`;
+    }
+    result = result.slice(0, -1);
+    seal.replyToSender(ctx, msg, result);
+    return seal.ext.newCmdExecuteResult(true);
+  } else {
+    const numStr = cmdArgs.getArgN(2);
+    if (!numStr.match(/^\d+$/)) {
+      seal.replyToSender(ctx, msg, "请输入有效的数字");
+      return seal.ext.newCmdExecuteResult(true);
+    }
+    const num = Number(numStr);
+    if (num < 1 || num > rawHistories[ctx.group.groupId]["messages"].length) {
+      seal.replyToSender(ctx, msg, "数字超过现有历史记录范围");
+      return seal.ext.newCmdExecuteResult(true);
+    }
+    seal.replyToSender(ctx, msg, replaceMarker(
+      rawHistories[ctx.group.groupId]["messages"][rawHistories[ctx.group.groupId]["messages"].length - num] === "user" ?
+        seal.ext.getStringConfig(ext, "user_schema") :
+        seal.ext.getStringConfig(ext, "assistant_schema"),
+      rawHistories[ctx.group.groupId]["messages"][rawHistories[ctx.group.groupId]["messages"].length - num].nickname,
+      rawHistories[ctx.group.groupId]["messages"][rawHistories[ctx.group.groupId]["messages"].length - num].id,
+      rawHistories[ctx.group.groupId]["messages"][rawHistories[ctx.group.groupId]["messages"].length - num].content,
+    ));
     return seal.ext.newCmdExecuteResult(true);
   }
-  const num = Number(numStr);
-  if (num < 1 || num > rawHistories[ctx.group.groupId]["messages"].length) {
-    seal.replyToSender(ctx, msg, "数字超过现有历史记录范围");
-    return seal.ext.newCmdExecuteResult(true);
-  }
-  seal.replyToSender(ctx, msg, replaceMarker(
-    rawHistories[ctx.group.groupId]["messages"][rawHistories[ctx.group.groupId]["messages"].length - num] === "user" ?
-      seal.ext.getStringConfig(ext, "user_schema") :
-      seal.ext.getStringConfig(ext, "assistant_schema"),
-    rawHistories[ctx.group.groupId]["messages"][rawHistories[ctx.group.groupId]["messages"].length - num].nickname,
-    rawHistories[ctx.group.groupId]["messages"][rawHistories[ctx.group.groupId]["messages"].length - num].id,
-    rawHistories[ctx.group.groupId]["messages"][rawHistories[ctx.group.groupId]["messages"].length - num].content,
-  ));
-  return seal.ext.newCmdExecuteResult(true);
 }
 
 export function handleDelete(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Message, cmdArgs: seal.CmdArgs): seal.CmdExecuteResult {
   const rawHistories: {
     [key: string]: { [key: string]: any[] }
   } = JSON.parse(storageGet(ext, "histories"));
-  const numStr = cmdArgs.getArgN(2);
-  if (!numStr.match(/^\d+$/)) {
-    seal.replyToSender(ctx, msg, "请输入有效的数字");
+  const memories: {
+    [key: string]: GroupMemory
+  } = JSON.parse(storageGet(ext, "memories"));
+  if (cmdArgs.getArgN(2) === "memory") {
+    const numStr = cmdArgs.getArgN(2);
+    if (!numStr.match(/^\d+$/)) {
+      seal.replyToSender(ctx, msg, "请输入有效的数字");
+      return seal.ext.newCmdExecuteResult(true);
+    }
+    const num = Number(numStr);
+    if (num < 1 || num > memories[ctx.group.groupId].length) {
+      seal.replyToSender(ctx, msg, "数字超过现有记忆范围");
+      return seal.ext.newCmdExecuteResult(true);
+    }
+    memories[ctx.group.groupId].splice(num - 1, 1);
+    storageSet(ext, "memories", JSON.stringify(memories));
+    seal.replyToSender(ctx, msg, `第 ${num} 条记忆清除了`);
+    return seal.ext.newCmdExecuteResult(true);
+  } else {
+    const numStr = cmdArgs.getArgN(2);
+    if (!numStr.match(/^\d+$/)) {
+      seal.replyToSender(ctx, msg, "请输入有效的数字");
+      return seal.ext.newCmdExecuteResult(true);
+    }
+    const num = Number(numStr);
+    if (num < 1 || num > rawHistories[ctx.group.groupId]["messages"].length) {
+      seal.replyToSender(ctx, msg, "数字超过现有历史记录范围");
+      return seal.ext.newCmdExecuteResult(true);
+    }
+    rawHistories[ctx.group.groupId]["messages"].splice(rawHistories[ctx.group.groupId]["messages"].length - num, 1);
+    storageSet(ext, "histories", JSON.stringify(rawHistories));
+    seal.replyToSender(ctx, msg, `倒数第 ${num} 条聊天记录清除了`);
     return seal.ext.newCmdExecuteResult(true);
   }
-  const num = Number(numStr);
-  if (num < 1 || num > rawHistories[ctx.group.groupId]["messages"].length) {
-    seal.replyToSender(ctx, msg, "数字超过现有历史记录范围");
-    return seal.ext.newCmdExecuteResult(true);
-  }
-  rawHistories[ctx.group.groupId]["messages"].splice(rawHistories[ctx.group.groupId]["messages"].length - num, 1);
-  storageSet(ext, "histories", JSON.stringify(rawHistories));
-  seal.replyToSender(ctx, msg, `倒数第 ${num} 条聊天记录清除了`);
-  return seal.ext.newCmdExecuteResult(true);
 }
 
 export function handleSet(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Message, cmdArgs: seal.CmdArgs): seal.CmdExecuteResult {
@@ -178,22 +279,6 @@ export function handleSet(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Mes
   storageSet(ext, "configs", JSON.stringify(configs));
   seal.replyToSender(ctx, msg, `群聊内 ${property} 属性已修改为 ${numStr}`);
   return seal.ext.newCmdExecuteResult(true);
-}
-
-export function genSetOption(_ext: seal.ExtInfo, _ctx: seal.MsgContext, _msg: seal.Message, cmdArgs: seal.CmdArgs): Option {
-  if (cmdArgs.getArgN(2) === "privilege") {
-    return {
-      checkPrivilege: {
-        privilegeType: "origin"
-      }
-    }
-  } else {
-    return {
-      checkPrivilege: {
-        privilegeType: "group"
-      }
-    }
-  }
 }
 
 export function handleUnset(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Message, cmdArgs: seal.CmdArgs): seal.CmdExecuteResult {
@@ -258,20 +343,4 @@ export function handleUnset(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.M
   }
   storageSet(ext, "configs", JSON.stringify(configs));
   return seal.ext.newCmdExecuteResult(true);
-}
-
-export function genUnsetOption(_ext: seal.ExtInfo, _ctx: seal.MsgContext, _msg: seal.Message, cmdArgs: seal.CmdArgs): Option {
-  if (cmdArgs.getArgN(2) === "privilege" || cmdArgs.getArgN(2) === "all") {
-    return {
-      checkPrivilege: {
-        privilegeType: "origin"
-      }
-    }
-  } else {
-    return {
-      checkPrivilege: {
-        privilegeType: "group"
-      }
-    }
-  }
 }

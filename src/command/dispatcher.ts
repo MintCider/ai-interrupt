@@ -1,8 +1,12 @@
 import {helpStr} from "../data";
+import {genNullOption} from "./handler";
 
 export type Option = {
   checkPrivilege: {
-    privilegeType: "origin" | "group"
+    privilegeType: "origin" | "group" | null
+  }
+  checkData: {
+    dataType: "history" | "memory" | null
   }
 }
 
@@ -18,9 +22,8 @@ export function setCommand(
   name: string,
   handler: (ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Message, cmdArgs: seal.CmdArgs) => seal.CmdExecuteResult,
   middleware: ((ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Message, option: Option) => [boolean, string])[] = [],
-  genOption: (ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Message, cmdArgs: seal.CmdArgs) => Option = () => {
-    return null
-  }) {
+  genOption: (ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Message, cmdArgs: seal.CmdArgs) => Option = genNullOption
+) {
   commandRegistry[name] = {handler, middleware, genOption};
 }
 
