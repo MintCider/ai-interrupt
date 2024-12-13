@@ -88,3 +88,5 @@ export type GroupConfig = {
   triggerLength: number | null,
   privilege: number | null,
 }
+
+export type GroupMemory = string[];
