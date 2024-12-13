@@ -1,18 +1,19 @@
-import {GroupConfig} from "../models";
-import {storageGet} from "../utils";
+import {Option} from "./dispatcher";
+import {GroupConfig} from "../model";
+import {storageGet} from "../util";
 
-export function checkPlatform(_ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Message, _option: any): [boolean, string] {
+export function checkPlatform(_ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Message, _option: Option): [boolean, string] {
   if (msg.platform !== "QQ" || ctx.isPrivate) {
     return [false, "只能在 QQ 群聊中开启或关闭插嘴功能！"];
   }
   return [true, ""];
 }
 
-export function checkPrivilege(ext: seal.ExtInfo, ctx: seal.MsgContext, _msg: seal.Message, option: any): [boolean, string] {
+export function checkPrivilege(ext: seal.ExtInfo, ctx: seal.MsgContext, _msg: seal.Message, option: Option): [boolean, string] {
   const configs: {
     [key: string]: GroupConfig
   } = JSON.parse(storageGet(ext, "configs"));
-  const privilegeType = option?.checkPrivilege?.privilegeType ?? "group";
+  const privilegeType = option.checkPrivilege.privilegeType;
   let privilege: number;
   if (privilegeType === "origin") {
     privilege = seal.ext.getIntConfig(ext, "privilege");

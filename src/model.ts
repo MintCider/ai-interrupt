@@ -1,4 +1,4 @@
-import {replaceMarker} from "./utils";
+import {replaceMarker} from "./util";
 
 type Role = "user" | "assistant" | "system";
 

@@ -1,4 +1,4 @@
-import {ImagePromptMessage, PromptMessage} from "./models";
+import {ImagePromptMessage, PromptMessage} from "./model";
 
 export function bodyBuilder(prompt: PromptMessage[] | ImagePromptMessage[], customBody: boolean, customBodyText: string, model: string, maxTokens: number, temperature: number, topP: number): any | null {
   let postBody: any;

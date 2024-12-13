@@ -1,7 +1,8 @@
-import {replaceMarker, storageGet, storageSet} from "../utils";
-import {GroupConfig} from "../models";
+import {Option} from "./dispatcher";
+import {replaceMarker, storageGet, storageSet} from "../util";
+import {GroupConfig} from "../model";
 
-export function genDefaultOption(_ext: seal.ExtInfo, _ctx: seal.MsgContext, _msg: seal.Message, _cmdArgs: seal.CmdArgs): any {
+export function genDefaultOption(_ext: seal.ExtInfo, _ctx: seal.MsgContext, _msg: seal.Message, _cmdArgs: seal.CmdArgs): Option {
   return {
     checkPrivilege: {
       privilegeType: "group"
@@ -179,7 +180,7 @@ export function handleSet(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Mes
   return seal.ext.newCmdExecuteResult(true);
 }
 
-export function genSetOption(_ext: seal.ExtInfo, _ctx: seal.MsgContext, _msg: seal.Message, cmdArgs: seal.CmdArgs): any {
+export function genSetOption(_ext: seal.ExtInfo, _ctx: seal.MsgContext, _msg: seal.Message, cmdArgs: seal.CmdArgs): Option {
   if (cmdArgs.getArgN(2) === "privilege") {
     return {
       checkPrivilege: {
@@ -259,7 +260,7 @@ export function handleUnset(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.M
   return seal.ext.newCmdExecuteResult(true);
 }
 
-export function genUnsetOption(_ext: seal.ExtInfo, _ctx: seal.MsgContext, _msg: seal.Message, cmdArgs: seal.CmdArgs): any {
+export function genUnsetOption(_ext: seal.ExtInfo, _ctx: seal.MsgContext, _msg: seal.Message, cmdArgs: seal.CmdArgs): Option {
   if (cmdArgs.getArgN(2) === "privilege" || cmdArgs.getArgN(2) === "all") {
     return {
       checkPrivilege: {

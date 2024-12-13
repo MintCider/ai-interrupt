@@ -1,4 +1,4 @@
-import {ChatHistory, GroupConfig} from "./models";
+import {ChatHistory, GroupConfig} from "./model";
 import {
   bodyBuilder,
   replaceCQImage,
@@ -6,10 +6,9 @@ import {
   requestAPI,
   storageGet,
   storageSet
-} from "./utils";
+} from "./util";
 import {helpStr} from "./data";
-import {dispatcher} from "./command/dispatcher";
-import {setCommand} from "./command/command_registry";
+import {setCommand, dispatcher} from "./command/dispatcher";
 import {
   genDefaultOption,
   genSetOption,
@@ -22,12 +21,12 @@ import {
   handleShow,
   handleStatus,
   handleUnset
-} from "./command/handlers";
+} from "./command/handler";
 import {
   checkHistory,
   checkPlatform,
   checkPrivilege
-} from "./command/middlewares";
+} from "./command/middleware";
 
 function registerConfigs(ext: seal.ExtInfo): void {
   seal.ext.registerStringConfig(ext, "---------------------------- 基础设置 ----------------------------", "本配置项无实际意义");
@@ -54,14 +53,17 @@ function registerConfigs(ext: seal.ExtInfo): void {
   seal.ext.registerBoolConfig(ext, "system_schema_switch", true, "是否为文本大模型提供系统提示");
   seal.ext.registerBoolConfig(ext, "multi_turn", false, "以多轮对话的形式请求 API");
   seal.ext.registerStringConfig(ext, "system_schema",
-    "你是一个工作在群聊中的机器人，你叫<nickname>，id为<id>。你工作在群聊中。接下来你会收到一系列消息，来自不同的用户和你自己。首先，你应该判断现在是否适合插话，如果不适合，请直接回复「无」。如果适合，你应该如此插话：\n" +
-    "\n" +
+    "你是一个工作在群聊中的机器人，你叫<nickname>，id为<id>。你工作在群聊中。接下来你会收到一系列消息，来自不同的用户和你自己。首先，你应该判断现在是否适合插话，如果不适合，请直接回复「无」。如果适合，你应该如此插话：\n\n" +
     "1. 以「<nickname>（<id>）：<内容>」的方式回复。\n" +
-    "\n" +
-    "记住，如果现在不适合插话，请直接回复「无」，回复越短越好，如同真正的群聊参与者。", "文本大模型的系统提示格式");
+    "2. 如果你认为有值得长期记忆的内容，另起一行，以[memory]<记忆内容>[/memory]的格式返回，将尖括号替换为实际的记忆内容。\n\n" +
+    "记住，如果现在不适合插话，请直接回复「无」，回复越短越好，如同真正的群聊参与者。\n\n" +
+    "当前记忆：\n" +
+    "<memory>", "文本大模型的系统提示格式");
   seal.ext.registerStringConfig(ext, "user_schema", "<nickname>（<id>）：<message>", "文本大模型的用户消息 prompt 格式");
   seal.ext.registerStringConfig(ext, "assistant_schema", "<nickname>（<id>）：<message>", "文本大模型的骰子消息 prompt 格式");
   seal.ext.registerStringConfig(ext, "retrieve_schema", "<nickname>（<id>）：(.*)", "从大模型回复提取骰子消息的正则表达式（**注意区分全角半角**）");
+  seal.ext.registerBoolConfig(ext, "memory_switch", false, "是否启用记忆功能");
+  seal.ext.registerStringConfig(ext, "memory_schema", "[memory](.*)[/memory]", "从大模型回复提取记忆的正则表达式（**注意区分全角半角**）");
   seal.ext.registerBoolConfig(ext, "regexp_s", false, "提取回复时，允许通配符（.）匹配换行符（\\n）（暂不可用）");
   seal.ext.registerBoolConfig(ext, "regexp_g", false, "提取回复时，处理多个匹配项");
   seal.ext.registerStringConfig(ext, "request_URL", "", "文本大模型的 API URL");
