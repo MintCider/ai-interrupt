@@ -1,5 +1,5 @@
 import {Option} from "./dispatcher";
-import {replaceMarker, storageGet, storageSet} from "../util";
+import {formatMemory, replaceMarker, storageGet, storageSet} from "../util";
 import {GroupConfig, GroupMemory} from "../model";
 
 export function genNullOption(_ext: seal.ExtInfo, _ctx: seal.MsgContext, _msg: seal.Message, _cmdArgs: seal.CmdArgs): Option {
@@ -69,6 +69,8 @@ export function genSetUnsetOption(_ext: seal.ExtInfo, _ctx: seal.MsgContext, _ms
 }
 
 export function handleOn(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Message, _cmdArgs: seal.CmdArgs): seal.CmdExecuteResult {
+  // Platform checked
+  // Privilege checked
   const switches: {
     [key: string]: boolean
   } = JSON.parse(storageGet(ext, "switches"));
@@ -79,6 +81,8 @@ export function handleOn(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Mess
 }
 
 export function handleOff(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Message, _cmdArgs: seal.CmdArgs): seal.CmdExecuteResult {
+  // Platform checked
+  // Privilege checked
   const switches: {
     [key: string]: boolean
   } = JSON.parse(storageGet(ext, "switches"));
@@ -101,6 +105,9 @@ export function handleStatus(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.
 }
 
 export function handleClear(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Message, cmdArgs: seal.CmdArgs): seal.CmdExecuteResult {
+  // Platform checked
+  // Data checked
+  // Privilege checked
   const rawHistories: {
     [key: string]: { [key: string]: any[] }
   } = JSON.parse(storageGet(ext, "histories"));
@@ -146,6 +153,8 @@ export function handleClear(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.M
 }
 
 export function handleShow(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Message, cmdArgs: seal.CmdArgs): seal.CmdExecuteResult {
+  // Platform checked
+  // Data checked
   const rawHistories: {
     [key: string]: { [key: string]: any[] }
   } = JSON.parse(storageGet(ext, "histories"));
@@ -153,12 +162,7 @@ export function handleShow(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Me
     [key: string]: GroupMemory
   } = JSON.parse(storageGet(ext, "memories"));
   if (cmdArgs.getArgN(2) === "memory") {
-    let result = ""
-    for (let i = 0; i < memories[ctx.group.groupId].length; i++) {
-      result += `${i + 1}. ${memories[ctx.group.groupId][i]}\n`;
-    }
-    result = result.slice(0, -1);
-    seal.replyToSender(ctx, msg, result);
+    seal.replyToSender(ctx, msg, formatMemory(memories[ctx.group.groupId]));
     return seal.ext.newCmdExecuteResult(true);
   } else {
     const numStr = cmdArgs.getArgN(2);
@@ -178,12 +182,16 @@ export function handleShow(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Me
       rawHistories[ctx.group.groupId]["messages"][rawHistories[ctx.group.groupId]["messages"].length - num].nickname,
       rawHistories[ctx.group.groupId]["messages"][rawHistories[ctx.group.groupId]["messages"].length - num].id,
       rawHistories[ctx.group.groupId]["messages"][rawHistories[ctx.group.groupId]["messages"].length - num].content,
+      formatMemory(memories[ctx.group.groupId]),
     ));
     return seal.ext.newCmdExecuteResult(true);
   }
 }
 
 export function handleDelete(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Message, cmdArgs: seal.CmdArgs): seal.CmdExecuteResult {
+  // Platform checked
+  // Data checked
+  // Privilege checked
   const rawHistories: {
     [key: string]: { [key: string]: any[] }
   } = JSON.parse(storageGet(ext, "histories"));
@@ -224,6 +232,8 @@ export function handleDelete(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.
 }
 
 export function handleSet(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Message, cmdArgs: seal.CmdArgs): seal.CmdExecuteResult {
+  // Platform checked
+  // Privilege checked
   const configs: {
     [key: string]: GroupConfig
   } = JSON.parse(storageGet(ext, "configs"));
@@ -282,6 +292,8 @@ export function handleSet(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Mes
 }
 
 export function handleUnset(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Message, cmdArgs: seal.CmdArgs): seal.CmdExecuteResult {
+  // Platform checked
+  // Privilege checked
   const configs: {
     [key: string]: GroupConfig
   } = JSON.parse(storageGet(ext, "configs"));
