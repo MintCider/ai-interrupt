@@ -199,7 +199,7 @@ export function handleDelete(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.
     [key: string]: GroupMemory
   } = JSON.parse(storageGet(ext, "memories"));
   if (cmdArgs.getArgN(2) === "memory") {
-    const numStr = cmdArgs.getArgN(2);
+    const numStr = cmdArgs.getArgN(3);
     if (!numStr.match(/^\d+$/)) {
       seal.replyToSender(ctx, msg, "请输入有效的数字");
       return seal.ext.newCmdExecuteResult(true);

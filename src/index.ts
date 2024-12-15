@@ -51,8 +51,9 @@ function registerConfigs(ext: seal.ExtInfo): void {
   seal.ext.registerBoolConfig(ext, "multi_turn", false, "以多轮对话的形式请求 API");
   seal.ext.registerStringConfig(ext, "system_schema",
     "你是一个工作在群聊中的机器人，你叫<nickname>，id为<id>。你工作在群聊中。接下来你会收到一系列消息，来自不同的用户和你自己，以及你曾经记录的记忆。你应该如此插话：\n\n" +
-    "1. 以「<nickname>（<id>）：<内容>」的方式回复。\n" +
-    "2. 如果你认为有值得长期记忆的内容，另起一行，以[memory]<记忆内容>[/memory]的格式返回，将尖括号替换为实际的记忆内容。\n\n" +
+    "1. 以「<nickname>（<id>）：内容」的方式回复。\n" +
+    "2. 如果你认为有值得长期记忆的内容，另起一行，以[memory]记忆内容[/memory]的格式返回，将尖括号替换为实际的记忆内容。\n" +
+    "3. 如果你认为有些记忆不必再记住，另起一行，以[delete]要删除的记忆内容[/delete]的格式返回，要删除的内容不要包括序号，要与记忆本身一致。\n\n" +
     "回复越短越好，如同真正的群聊参与者。\n\n" +
     "当前记忆：\n" +
     "<memory>", "文本大模型的系统提示格式");
@@ -60,7 +61,8 @@ function registerConfigs(ext: seal.ExtInfo): void {
   seal.ext.registerStringConfig(ext, "assistant_schema", "<nickname>（<id>）：<message>", "文本大模型的骰子消息 prompt 格式");
   seal.ext.registerStringConfig(ext, "retrieve_schema", "<nickname>（<id>）：(.*)", "从大模型回复提取骰子消息的正则表达式（**注意区分全角半角**）");
   seal.ext.registerBoolConfig(ext, "memory_switch", false, "是否启用记忆功能");
-  seal.ext.registerStringConfig(ext, "memory_schema", "\[memory\](.*)\[/memory\]", "从大模型回复提取记忆的正则表达式（**注意区分全角半角**）");
+  seal.ext.registerStringConfig(ext, "memory_schema", "\\[memory\\](.*)\\[/memory\\]", "从大模型回复提取记忆的正则表达式（**注意区分全角半角**）");
+  seal.ext.registerStringConfig(ext, "delete_memory_schema", "\\[delete\\](.*)\\[/delete\\]", "从大模型回复提取删除记忆的正则表达式（**注意区分全角半角**）");
   seal.ext.registerBoolConfig(ext, "regexp_s", false, "提取回复时，允许通配符（.）匹配换行符（\\n）（暂不可用）");
   seal.ext.registerBoolConfig(ext, "regexp_g", false, "提取回复时，处理多个匹配项");
   seal.ext.registerStringConfig(ext, "request_URL", "", "文本大模型的 API URL");
@@ -241,7 +243,41 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
         reqBody,
         seal.ext.getBoolConfig(ext, "debug_resp")
       );
-    // Parse response
+    // Handle memory
+    if (seal.ext.getBoolConfig(ext, "memory_switch")) {
+      const memoryMatchExpr = new RegExp(replaceMarker(
+        seal.ext.getStringConfig(ext, "memory_schema"),
+        seal.ext.getStringConfig(ext, "nickname"),
+        seal.ext.getStringConfig(ext, "id"),
+        "",
+        "",
+      ), "g");
+      const deleteMemoryMatchExpr = new RegExp(replaceMarker(
+        seal.ext.getStringConfig(ext, "delete_memory_schema"),
+        seal.ext.getStringConfig(ext, "nickname"),
+        seal.ext.getStringConfig(ext, "id"),
+        "",
+        "",
+      ), "g");
+      const memoryMatchResult = [...resp.matchAll(memoryMatchExpr)];
+      const deleteMemoryMatchResult = [...resp.matchAll(deleteMemoryMatchExpr)];
+      for (const match of memoryMatchResult) {
+        const memory = match?.[1] ?? "";
+        if (!memory) {
+          continue;
+        }
+        memories[ctx.group.groupId].push(memory);
+      }
+      for (const match of deleteMemoryMatchResult) {
+        const memory = match?.[1] ?? "";
+        if (!memory) {
+          continue;
+        }
+        memories[ctx.group.groupId] = memories[ctx.group.groupId].filter((item) => item !== memory);
+      }
+      storageSet(ext, "memories", JSON.stringify(memories));
+    }
+    // Handle assistant message
     const retrieveMatchExpr = new RegExp(replaceMarker(
       seal.ext.getStringConfig(ext, "retrieve_schema"),
       seal.ext.getStringConfig(ext, "nickname"),
@@ -249,26 +285,8 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
       "",
       "",
     ), "g");
-    const memoryMatchExpr = new RegExp(replaceMarker(
-      seal.ext.getStringConfig(ext, "memory_schema"),
-      seal.ext.getStringConfig(ext, "nickname"),
-      seal.ext.getStringConfig(ext, "id"),
-      "",
-      "",
-    ), "g");
     // ), seal.ext.getBoolConfig(ext, "regexp_s") ? "gs" : "g");
     const retrieveMatchResult = [...resp.matchAll(retrieveMatchExpr)];
-    const memoryMatchResult = [...resp.matchAll(memoryMatchExpr)];
-    // Handle memory
-    for (const match of memoryMatchResult) {
-      const memory = match?.[1] ?? "";
-      if (!memory) {
-        continue;
-      }
-      memories[ctx.group.groupId].push(memory);
-    }
-    storageSet(ext, "memories", JSON.stringify(memories));
-    // Handle assistant message
     for (const match of retrieveMatchResult) {
       const assistantMessage = match?.[1] ?? "";
       if (!assistantMessage) {
