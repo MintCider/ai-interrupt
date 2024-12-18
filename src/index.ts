@@ -47,8 +47,8 @@ function registerConfigs(ext: seal.ExtInfo): void {
   seal.ext.registerFloatConfig(ext, "image_temperature", -1);
   seal.ext.registerFloatConfig(ext, "image_top_p", -1);
   seal.ext.registerStringConfig(ext, "---------------------------- 文本大模型设置 ----------------------------", "本配置项无实际意义");
-  seal.ext.registerBoolConfig(ext, "system_schema_switch", true, "是否为文本大模型提供系统提示");
   seal.ext.registerBoolConfig(ext, "multi_turn", false, "以多轮对话的形式请求 API");
+  seal.ext.registerBoolConfig(ext, "system_schema_switch", true, "是否为文本大模型提供系统提示");
   seal.ext.registerStringConfig(ext, "system_schema",
     "你是一个工作在群聊中的机器人，你叫<nickname>，id为<id>。你工作在群聊中。接下来你会收到一系列消息，来自不同的用户和你自己，以及你曾经记录的记忆。你应该如此插话：\n\n" +
     "1. 以「<nickname>（<id>）：内容」的方式回复。\n" +

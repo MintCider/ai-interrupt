@@ -41,14 +41,13 @@ export async function requestAPI(URL: string, key: string, reqBody: any | null, 
     body: JSON.stringify(reqBody),
   });
 
+  const data = await response.json();
   if (!response.ok) {
     if (printLog) {
-      console.log(`ai-interrupt: Failed to request API: HTTP ${response.status}: ${response.statusText}`);
+      console.log(`ai-interrupt: Failed to request API: HTTP ${response.status}: ${response.statusText}\n${data ? JSON.stringify(data) : ""}`);
     }
     return null
   }
-
-  const data = await response.json();
 
   if (printLog) {
     console.log(JSON.stringify(data));
