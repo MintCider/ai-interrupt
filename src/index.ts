@@ -237,7 +237,7 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
       console.log(JSON.stringify(reqBody));
     }
     // Request API
-    const resp = seal.ext.getBoolConfig(ext, "mock_resp") ?
+    let resp = seal.ext.getBoolConfig(ext, "mock_resp") ?
       seal.ext.getStringConfig(ext, "mock_resp_text") :
       await requestAPI(seal.ext.getStringConfig(ext, "request_URL"), seal.ext.getStringConfig(ext, "key"),
         reqBody,
@@ -276,6 +276,11 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
         memories[ctx.group.groupId] = memories[ctx.group.groupId].filter((item) => item !== memory);
       }
       storageSet(ext, "memories", JSON.stringify(memories));
+      // Remove matched
+      resp = resp
+        .replace(memoryMatchExpr, "")
+        .replace(deleteMemoryMatchExpr, "")
+        .trim();
     }
     // Handle assistant message
     const retrieveMatchExpr = new RegExp(replaceMarker(
