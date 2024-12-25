@@ -18,11 +18,19 @@
 
 - 可以使用 `.interrupt clear all/users/assistant` 清除储存的全部历史记录，或分别清除储存的用户消息和骰子消息。
 
+- 可以使用 `.interrupt clear memory` 清除储存的全部长期记忆。
+
 - 可以使用 `.interrupt show <num>` 查看储存的特定消息。`<num>` 应为一个正整数，消息的编号由新到旧排列。
 
   例如：`.interrupt show 1` 将展示插件存储的倒数第一条消息，即为刚刚收到或发送的消息。展示消息时，将根据消息来源采用对应的 schema （关于 schema 请见下文「文本大模型」设置部分）。
 
+- 可以使用 `.interrupt show memory <num>` 查看储存的特定长期记忆。`<num>` 应为一个正整数，记忆的编号由旧到新排列。
+
+  例如：`.interrupt show memory 1` 将展示插件存储的第一条长期记忆。
+
 - 可以使用 `.interrupt delete <num>` 删除储存的特定消息。与 `show` 命令相同，`<num>` 应为一个正整数，消息的编号由新到旧排列。
+
+- 可以使用 `.interrupt delete memory <num>` 删除储存的特定长期记忆。与 `show memory` 命令相同，`<num>` 应为一个正整数，记忆的编号由旧到新排列。
 
 - 可以使用 `.interrupt set <property> <num>` 在群内设定不同于默认配置的属性。`<property>` 有四种，分别为 `possibility`、`history_length`、`trigger_length` 与 `privilege`。
 
@@ -115,14 +123,24 @@
   默认为 -1，即使用模型的默认参数。如果你不确定这是什么，就不要修改。
 
 #### 文本大模型设置
+> [!NOTE]
+> v0.1.0 版本引入了 schema 机制，以增强调用大模型的灵活性。目前可在 schema 中使用的标签分别为：
+>
+> - `<nickname>`：用户的昵称或插件配置项中的骰子昵称。
+> - `<id>`：用户的 QQ 号或插件配置项中的骰子 QQ 号。
+> - `<message>`：用户的消息或插件的回复。
+> - `<memory>`：使用 Markdown 列表格式的长期记忆。当不存在长期记忆时，会被替换为「无」。
+>
+> schema 可以被用于构建 prompt 以及从大模型回复中提取信息，两种场景下对 schema 的处理略有不同。
+>
+> 在构建 prompt 时，对于 system prompt、用户消息以及骰子产生的回复，会分别根据 `system_schema`、`user_schema` 以及 `assistant_schema`，替换标签后压入 prompt。上述四种标签都可以在构建 prompt 时使用，需要注意的是，只有在 `user_schema` 中，标签解析为用户相关信息，其他情况下解析为骰子相关信息。
+>
+> 在从大模型回复中提取信息时，只能使用 `<nickname>` 和 `<id>` 标签，分别对应骰子昵称和骰子 QQ 号。`retrieve_schema`、`memory_schema` 与 `delete_memory_schema` 应是带一个捕获组的正则表达式，其内的 `<nickname>` 与 `<id>` 首先会被插件配置项中的数据替换。需要注意正则表达式的转义问题。
+>
+> 可以参考插件配置项中，关于 schema 的默认值进行理解。
 
-v0.1.0 版本引入了 schema 机制，以增强调用大模型的灵活性。在存储历史消息时，会储存用户的昵称、QQ 号以及消息本身。
-
-在构建 prompt 时，对于 system prompt、用户消息以及骰子产生的回复，会分别根据 `system_schema`、`user_schema` 以及 `assistant_schema`，替换占位符后压入 prompt。其中，`user_schema` 的占位符使用实际存储的数据替换。而 `system_schema` 与 `assistant_schema` 则使用插件配置项中的昵称与 QQ 号替换。
-
-需要特别注意的是，对于 `assistant_schema` 而言，`<message>` 的实际内容取决于 `retrieve_schema`。`retrieve_schema` 应是一个带捕获组的正则表达式。其内的 `<nickname>` 与 `<id>` 首先会被插件配置项中的数据替换，随后第一个捕获组所捕获的内容，会被作为插件的实际回复所取回，并存入历史聊天记录。
-
-`system_schema`、`user_schema`、`assistant_schema` 以及 `retrieve_schema` 的默认值提供了一个最小可工作范例。
+- **以多轮对话的形式请求 API：**
+  插件默认将全部历史消息拼接为单个 user message，请求 API。开启此功能后，插件将每条历史消息作为一个 user/assistant message 请求 API，以模拟多轮对话的形式。*可能*改善部分模型的对话效果。
 
 - **是否为文本大模型提供系统提示：**
   此选项用于配合自定义请求体功能。部分模型通过在请求体中提供特定信息设定人设，此时再提供系统提示可能导致错误。关闭此开关后，插件请求 API 时，将不再提供系统提示。
@@ -139,25 +157,14 @@ v0.1.0 版本引入了 schema 机制，以增强调用大模型的灵活性。�
 - **从大模型回复提取骰子消息的正则表达式：**
   请认真阅读上面关于 schema 的描述后修改。注意区分全角半角，注意要有捕获组。
 
-- **提取回复时，允许通配符（.）匹配换行符（\\n）（暂不可用）**：
-  
-  <details><summary>由于海豹核心的 JS 环境目前不支持正则表达式的 <code>s</code> 标志，此选项无效。</summary>开启此开关后，等价于为正则表达式开启 `s` 标志（参考[通过标志进行高级搜索](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Regular_expressions#%E9%80%9A%E8%BF%87%E6%A0%87%E5%BF%97%E8%BF%9B%E8%A1%8C%E9%AB%98%E7%BA%A7%E6%90%9C%E7%B4%A2)），即允许通配符 `.` 匹配换行符 `\n`。此选项适用于以下格式的多行回复：
+- **是否启用记忆功能：**
+  开启此功能后，插件会尝试使用 `memory_schema` 和 `delete_memory_schema` 解析/删除长期记忆，并在构建 prompt 时，替换 `<memory>` 标签。关闭此功能后，插件不会尝试解析。
 
-  ```text
-  <骰子昵称>（<骰子 ID>）：第一行文本
-  第二行文本
-  第三行文本
-  ```
-  
-  此时，插件会将
+- **从大模型回复提取记忆的正则表达式：**
+  请认真阅读上面关于 schema 的描述后修改。注意区分全角半角，注意要有捕获组。
 
-  ```text
-  第一行文本
-  第二行文本
-  第三行文本
-  ```
-
-  作为骰子的回复。</details>
+- **从大模型回复删除记忆的正则表达式：**
+  请认真阅读上面关于 schema 的描述后修改。注意区分全角半角，注意要有捕获组。
 
 - **提取回复时，处理多个匹配项：**
   开启此开关后，等价于为正则表达式开启 `g` 标志（参考[通过标志进行高级搜索](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Guide/Regular_expressions#%E9%80%9A%E8%BF%87%E6%A0%87%E5%BF%97%E8%BF%9B%E8%A1%8C%E9%AB%98%E7%BA%A7%E6%90%9C%E7%B4%A2)），即尝试捕获每个符合正则表达式的文本。此选项适用于以下格式的多行回复：

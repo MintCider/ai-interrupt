@@ -1,4 +1,4 @@
-import {replaceMarker} from "./utils";
+import {replaceMarker} from "./util";
 
 type Role = "user" | "assistant" | "system";
 
@@ -58,9 +58,12 @@ export class ChatHistory {
     return this.messages.length;
   }
 
-  buildPrompt(systemPromptSwitch: boolean, systemPrompt: string, userSchema: string, assistantSchema: string): PromptMessage[] {
-    const prompt: PromptMessage[] = systemPromptSwitch ? [{role: "system", content: systemPrompt}] : [];
-    let content: string = "";
+  buildPrompt(systemPromptSwitch: boolean, systemPrompt: string, userSchema: string, assistantSchema: string, memory: string, multiTurn: boolean): PromptMessage[] {
+    const prompt: PromptMessage[] = systemPromptSwitch ? [{
+      role: "system",
+      content: systemPrompt
+    }] : [];
+    let combinedContent: string = "";
 
     for (const message of this.messages) {
       const parsedMessage = replaceMarker(
@@ -68,10 +71,16 @@ export class ChatHistory {
         message.nickname,
         message.id,
         message.content,
+        memory,
       );
-      content = content + parsedMessage + "\n";
+      combinedContent = combinedContent + parsedMessage + "\n";
+      if (multiTurn) {
+        prompt.push({role: message.role, content: parsedMessage});
+      }
     }
-    prompt.push({role: "user", content});
+    if (!multiTurn) {
+      prompt.push({role: "user", content: combinedContent});
+    }
 
     return prompt;
   }
@@ -83,3 +92,5 @@ export type GroupConfig = {
   triggerLength: number | null,
   privilege: number | null,
 }
+
+export type GroupMemory = string[];

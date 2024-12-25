@@ -1,4 +1,4 @@
-import {ImagePromptMessage, PromptMessage} from "./types";
+import {GroupMemory, ImagePromptMessage, PromptMessage} from "./model";
 
 export function bodyBuilder(prompt: PromptMessage[] | ImagePromptMessage[], customBody: boolean, customBodyText: string, model: string, maxTokens: number, temperature: number, topP: number): any | null {
   let postBody: any;
@@ -41,14 +41,13 @@ export async function requestAPI(URL: string, key: string, reqBody: any | null, 
     body: JSON.stringify(reqBody),
   });
 
+  const data = await response.json();
   if (!response.ok) {
     if (printLog) {
-      console.log(`ai-interrupt: Failed to request API: HTTP ${response.status}: ${response.statusText}`);
+      console.log(`ai-interrupt: Failed to request API: HTTP ${response.status}: ${response.statusText}\n${data ? JSON.stringify(data) : ""}`);
     }
     return null
   }
-
-  const data = await response.json();
 
   if (printLog) {
     console.log(JSON.stringify(data));
@@ -70,11 +69,12 @@ export function storageSet(ext: seal.ExtInfo, key: string, content: string): voi
   ext.storageSet(key, content);
 }
 
-export function replaceMarker(raw: string, nickname: string, id: string, message: string): string {
+export function replaceMarker(raw: string, nickname: string, id: string, message: string, memory: string): string {
   return raw
     .replace(/<nickname>/g, nickname)
     .replace(/<id>/g, id)
-    .replace(/<message>/g, message);
+    .replace(/<message>/g, message)
+    .replace(/<memory>/g, memory);
 }
 
 function buildImagePrompt(imageURL: string, systemPrompt: string): ImagePromptMessage[] {
@@ -124,4 +124,13 @@ export async function replaceCQImage(raw: string, systemPrompt: string, URL: str
     }
     return match;
   })
+}
+
+export function formatMemory(memory: GroupMemory): string {
+  let result = ""
+  for (let i = 0; i < memory.length; i++) {
+    result += `${i + 1}. ${memory[i]}\n`;
+  }
+  result = result.slice(0, -1);
+  return result ? result : "无";
 }
