@@ -128,14 +128,15 @@
 >
 > - `<nickname>`：用户的昵称或插件配置项中的骰子昵称。
 > - `<id>`：用户的 QQ 号或插件配置项中的骰子 QQ 号。
+> - `<time>`：当前时间。详细格式请见 [Date.prototype.toString()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toString)。
 > - `<message>`：用户的消息或插件的回复。
 > - `<memory>`：使用 Markdown 列表格式的长期记忆。当不存在长期记忆时，会被替换为「无」。
 >
 > schema 可以被用于构建 prompt 以及从大模型回复中提取信息，两种场景下对 schema 的处理略有不同。
 >
-> 在构建 prompt 时，对于 system prompt、用户消息以及骰子产生的回复，会分别根据 `system_schema`、`user_schema` 以及 `assistant_schema`，替换标签后压入 prompt。上述四种标签都可以在构建 prompt 时使用，需要注意的是，只有在 `user_schema` 中，标签解析为用户相关信息，其他情况下解析为骰子相关信息。
+> 在构建 prompt 时，对于 system prompt、用户消息以及骰子产生的回复，会分别根据 `system_schema`、`user_schema` 以及 `assistant_schema`，替换标签后压入 prompt。上述五种标签都可以在构建 prompt 时使用，需要注意的是，只有在 `user_schema` 中，标签解析为用户相关信息，其他情况下解析为骰子相关信息。
 >
-> 在从大模型回复中提取信息时，只能使用 `<nickname>` 和 `<id>` 标签，分别对应骰子昵称和骰子 QQ 号。`retrieve_schema`、`memory_schema` 与 `delete_memory_schema` 应是带一个捕获组的正则表达式，其内的 `<nickname>` 与 `<id>` 首先会被插件配置项中的数据替换。需要注意正则表达式的转义问题。
+> 在从大模型回复中提取信息时，只能使用 `<nickname>` 和 `<id>` 标签，分别对应骰子昵称和骰子 QQ 号（其实 `<time>` 也能用但是没任何意义）。`retrieve_schema`、`memory_schema` 与 `delete_memory_schema` 应是带一个捕获组的正则表达式，其内的 `<nickname>` 与 `<id>` 首先会被插件配置项中的数据替换。需要注意正则表达式的转义问题。
 >
 > 可以参考插件配置项中，关于 schema 的默认值进行理解。
 

@@ -1,24 +1,21 @@
 // ==UserScript==
 // @name         AI 插嘴
 // @author       Mint Cider
-// @version      0.5.0
+// @version      0.5.1
 // @description  接入 AI 并随机插嘴。详细使用说明见项目主页 README。
-// @timestamp    1735103300
+// @timestamp    1735145000
 // @license      MIT
 // @homepageURL  https://github.com/MintCider/ai-interrupt
 // @updateUrl    https://github.com/MintCider/ai-interrupt/releases/latest/download/ai-interrupt.js
 // @sealVersion  >=1.4.6-0
 // ==/UserScript==
 
-// # v0.5.0 更新日志
+// # v0.5.1 更新日志
 //
 // ## 功能
 //
-// - 新增「以多轮对话的形式请求 API」开关，允许用户选择在请求 API 时将历史聊天记录以单轮/多轮对话的方式呈现，*可能*改善部分模型的对话效果。
-// - 新增记忆相关功能，允许将模型返回的特定格式解析为长期记忆，或删除已有的长期记忆。详情请见 README。
-// - 新增 `.interrupt clear memory`、`.interrupt show memoory <num>`、`.interrupt delete memory <num>` 命令，允许清除全部/查看/删除一条长期记忆。
-// - 移除无效的「允许通配符（.）匹配换行符（\n）」开关。可以使用通配符以外的表达式（例如 `[\s\S]`）实现相同效果。
+// - 新增 `<time>` 标签，可以在 schema 中使用。详细格式请见 [Date.prototype.toString()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toString)。Schema 说明请见 README。
 //
 // ## 修复
 //
-// - 修复输出 API 响应日志时，如果状态码不为 200，则完全无视响应体的问题。
+// - 修复帮助文本为裸指令格式的问题。

@@ -74,7 +74,8 @@ export function replaceMarker(raw: string, nickname: string, id: string, message
     .replace(/<nickname>/g, nickname)
     .replace(/<id>/g, id)
     .replace(/<message>/g, message)
-    .replace(/<memory>/g, memory);
+    .replace(/<memory>/g, memory)
+    .replace(/<time>/g, Date().toString());
 }
 
 function buildImagePrompt(imageURL: string, systemPrompt: string): ImagePromptMessage[] {
