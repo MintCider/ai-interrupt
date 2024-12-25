@@ -62,8 +62,8 @@ function registerConfigs(ext: seal.ExtInfo): void {
   seal.ext.registerStringConfig(ext, "retrieve_schema", "<nickname>（<id>）：(.*)", "从大模型回复提取骰子消息的正则表达式（**注意区分全角半角**）");
   seal.ext.registerBoolConfig(ext, "memory_switch", false, "是否启用记忆功能");
   seal.ext.registerStringConfig(ext, "memory_schema", "\\[memory\\](.*)\\[/memory\\]", "从大模型回复提取记忆的正则表达式（**注意区分全角半角**）");
-  seal.ext.registerStringConfig(ext, "delete_memory_schema", "\\[delete\\](.*)\\[/delete\\]", "从大模型回复提取删除记忆的正则表达式（**注意区分全角半角**）");
-  seal.ext.registerBoolConfig(ext, "regexp_s", false, "提取回复时，允许通配符（.）匹配换行符（\\n）（暂不可用）");
+  seal.ext.registerStringConfig(ext, "delete_memory_schema", "\\[delete\\](.*)\\[/delete\\]", "从大模型回复删除记忆的正则表达式（**注意区分全角半角**）");
+  // seal.ext.registerBoolConfig(ext, "regexp_s", false, "提取回复时，允许通配符（.）匹配换行符（\\n）（暂不可用）");
   seal.ext.registerBoolConfig(ext, "regexp_g", false, "提取回复时，处理多个匹配项");
   seal.ext.registerStringConfig(ext, "request_URL", "", "文本大模型的 API URL");
   seal.ext.registerStringConfig(ext, "key", "", "文本大模型的 API Key");
