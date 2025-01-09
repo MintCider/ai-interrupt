@@ -193,7 +193,7 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
       seal.ext.getBoolConfig(ext, "debug_resp")
     )
   }
-  currentHistory.addMessageUser(userMessage, msg.sender.nickname, msg.sender.userId.slice(3), historyLength);
+  currentHistory.addMessageUser(userMessage, ctx.player.name, msg.sender.userId.slice(3), historyLength);
   rawHistories[ctx.group.groupId]["messages"] = currentHistory.messages;
   storageSet(ext, "histories", JSON.stringify(rawHistories));
   let at = false;
