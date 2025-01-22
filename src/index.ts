@@ -46,6 +46,8 @@ function registerConfigs(ext: seal.ExtInfo): void {
   seal.ext.registerIntConfig(ext, "image_max_tokens", 200, "视觉大模型的最大生成长度");
   seal.ext.registerFloatConfig(ext, "image_temperature", -1);
   seal.ext.registerFloatConfig(ext, "image_top_p", -1);
+  seal.ext.registerBoolConfig(ext, "image_custom_api", false, "是否使用自定义 API（格式详见 README）");
+  seal.ext.registerStringConfig(ext, "image_custom_api_url", "", "自定义 API 的 URL");
   seal.ext.registerStringConfig(ext, "---------------------------- 文本大模型设置 ----------------------------", "本配置项无实际意义");
   seal.ext.registerBoolConfig(ext, "multi_turn", false, "以多轮对话的形式请求 API");
   seal.ext.registerBoolConfig(ext, "system_schema_switch", true, "是否为文本大模型提供系统提示");
@@ -190,7 +192,9 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
       seal.ext.getFloatConfig(ext, "image_temperature"),
       seal.ext.getFloatConfig(ext, "image_top_p"),
       seal.ext.getBoolConfig(ext, "debug_prompt"),
-      seal.ext.getBoolConfig(ext, "debug_resp")
+      seal.ext.getBoolConfig(ext, "debug_resp"),
+      seal.ext.getBoolConfig(ext, "image_custom_api"),
+      seal.ext.getStringConfig(ext, "image_custom_api_url"),
     )
   }
   currentHistory.addMessageUser(userMessage, ctx.player.name, msg.sender.userId.slice(3), historyLength);

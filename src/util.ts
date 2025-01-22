@@ -56,6 +56,24 @@ export async function requestAPI(URL: string, key: string, reqBody: any | null, 
   return data?.choices?.[0]?.message?.content ?? null;
 }
 
+export async function requestImageCustomAPI(URL: string, imageCustomAPIURL: string, printLog: boolean): Promise<string | null> {
+  const response = await fetch(imageCustomAPIURL, {
+    method: "POST",
+    body: JSON.stringify({"url": URL}),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    if (printLog) {
+      console.log(`ai-interrupt: Failed to request image custom API: HTTP ${response.status}: ${response.statusText}\n${data ? JSON.stringify(data) : ""}\nMaybe you need to check your custom API server.`);
+    }
+    return null
+  }
+  if (printLog) {
+    console.log(JSON.stringify(data));
+  }
+  return data?.data ?? null;
+}
+
 export function storageGet(ext: seal.ExtInfo, key: string): string {
   let result = ext.storageGet(key);
   if (result) {
@@ -94,7 +112,7 @@ function buildImagePrompt(imageURL: string, systemPrompt: string): ImagePromptMe
   return result;
 }
 
-export async function replaceCQImage(raw: string, systemPrompt: string, URL: string, key: string, model: string, maxTokens: number, temperature: number, topP: number, debugPrompt: boolean, debugResp: boolean): Promise<string> {
+export async function replaceCQImage(raw: string, systemPrompt: string, URL: string, key: string, model: string, maxTokens: number, temperature: number, topP: number, debugPrompt: boolean, debugResp: boolean, imageCustomAPI: boolean, imageCustomAPIURL: string): Promise<string> {
   const regexPattern = /\[CQ:image[^\[\]]*(file|url)=(http[^,]*)[^\[\]]*?\]/g;
   const matches: { match: string; capture: string }[] = [];
   raw.replace(regexPattern, (match, _, capture) => {
@@ -103,16 +121,25 @@ export async function replaceCQImage(raw: string, systemPrompt: string, URL: str
   })
   const results: (string | null)[] = await Promise.all(
     matches.map(async ({capture}) => {
-      if (debugPrompt) {
-        console.log(JSON.stringify(buildImagePrompt(capture, systemPrompt)));
+      if (imageCustomAPI) {
+        const resp = await requestImageCustomAPI(capture, imageCustomAPIURL, debugResp);
+        if (!resp) {
+          return null;
+        }
+        return resp;
+      } else {
+        const prompt = buildImagePrompt(capture, systemPrompt);
+        if (debugPrompt) {
+          console.log(JSON.stringify(prompt));
+        }
+        const resp = await requestAPI(URL, key, bodyBuilder(
+          prompt, false, "", model, maxTokens, temperature, topP
+        ), debugResp);
+        if (!resp) {
+          return null;
+        }
+        return resp;
       }
-      const resp = await requestAPI(URL, key, bodyBuilder(
-        buildImagePrompt(capture, systemPrompt), false, "", model, maxTokens, temperature, topP
-      ), debugResp);
-      if (!resp) {
-        return null;
-      }
-      return resp;
     })
   );
   const matchMap: { [key: string]: string | null } = {};
