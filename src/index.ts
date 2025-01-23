@@ -34,6 +34,8 @@ function registerConfigs(ext: seal.ExtInfo): void {
   seal.ext.registerStringConfig(ext, "nickname", "", "骰子昵称");
   seal.ext.registerStringConfig(ext, "id", "", "骰子 QQ 号");
   seal.ext.registerBoolConfig(ext, "react_at", true, "被 @ 时是否必定回复（无论历史记录长短）");
+  seal.ext.registerTemplateConfig(ext, "trigger_words", [""], "提升插嘴概率的正则表达式");
+  seal.ext.registerTemplateConfig(ext, "trigger_words_possibility", [""], "对应正则表达式提升的概率");
   seal.ext.registerBoolConfig(ext, "reply", false, "插嘴时是否回复触发消息");
   seal.ext.registerBoolConfig(ext, "debug_prompt", false, "打印 prompt 日志");
   seal.ext.registerBoolConfig(ext, "debug_resp", true, "打印 API Response 日志");
@@ -142,7 +144,7 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
   const configs: {
     [key: string]: GroupConfig
   } = JSON.parse(storageGet(ext, "configs"));
-  const possibility = configs[ctx.group.groupId] && configs[ctx.group.groupId].possibility ?
+  let possibility = configs[ctx.group.groupId] && configs[ctx.group.groupId].possibility ?
     configs[ctx.group.groupId].possibility : seal.ext.getFloatConfig(ext, "possibility");
   const historyLength = configs[ctx.group.groupId] && configs[ctx.group.groupId].historyLength ?
     configs[ctx.group.groupId].historyLength : seal.ext.getIntConfig(ext, "history_length");
@@ -200,15 +202,23 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
   currentHistory.addMessageUser(userMessage, ctx.player.name, msg.sender.userId.slice(3), historyLength);
   rawHistories[ctx.group.groupId]["messages"] = currentHistory.messages;
   storageSet(ext, "histories", JSON.stringify(rawHistories));
-  let at = false;
+
+  // Trigger
+  let trigger = false;
+  // Check at
   if (msg.message.includes(`[CQ:at,qq=${seal.ext.getStringConfig(ext, "id")}]`)) {
-    at = seal.ext.getBoolConfig(ext, "react_at");
+    trigger = seal.ext.getBoolConfig(ext, "react_at");
   }
-  // Check reply condition
-  if (at || (
-    currentHistory.getLength() >= triggerLength
-    && Math.random() < possibility
-  )) {
+  // Check trigger words
+  for (let i = 0; i < seal.ext.getTemplateConfig(ext, "keywords").length; i++) {
+    const keyword = new RegExp(seal.ext.getTemplateConfig(ext, "keywords")[i]);
+    if (keyword.test(msg.message)) {
+      possibility += Number(seal.ext.getTemplateConfig(ext, "keywords_possibility")[i]);
+      break;
+    }
+  }
+  trigger = trigger || (currentHistory.getLength() >= triggerLength && Math.random() < possibility);
+  if (trigger) {
     // Load group memories
     const memories: {
       [key: string]: GroupMemory
