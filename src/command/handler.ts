@@ -161,6 +161,11 @@ export function handleShow(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Me
   const memories: {
     [key: string]: GroupMemory
   } = JSON.parse(storageGet(ext, "memories"));
+  // During .interrupt show <num>, it's possible that this function is called
+  // before the existence of memory is checked.
+  if (!(ctx.group.groupId in memories)) {
+    memories[ctx.group.groupId] = [];
+  }
   if (cmdArgs.getArgN(2) === "memory") {
     seal.replyToSender(ctx, msg, formatMemory(memories[ctx.group.groupId]));
     return seal.ext.newCmdExecuteResult(true);
