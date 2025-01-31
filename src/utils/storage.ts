@@ -1,5 +1,5 @@
 import {memoryStore} from "../data";
-import {GroupConfig, GroupMemory} from "../model";
+import {ChatHistory, GroupConfig, GroupMemory} from "../model";
 
 export function storageGet(ext: seal.ExtInfo, key: string): string {
   let result = ext.storageGet(key);
@@ -23,10 +23,10 @@ export function initializeStore(ext: seal.ExtInfo) {
     [key: string]: GroupConfig
   } = JSON.parse(storageGet(ext, "configs"));
   memoryStore.set("configs", configs);
-  const rawHistories: {
-    [key: string]: { [key: string]: any[] }
-  } = JSON.parse(storageGet(ext, "histories"));
-  memoryStore.set("histories", rawHistories);
+  const histories: {
+    [key: string]: ChatHistory
+  } = ChatHistory.deserializeFromJson(storageGet(ext, "histories"));
+  memoryStore.set("histories", histories);
   const memories: {
     [key: string]: GroupMemory
   } = JSON.parse(storageGet(ext, "memories"));

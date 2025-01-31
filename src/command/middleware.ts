@@ -1,5 +1,5 @@
 import {Option} from "./dispatcher";
-import {GroupConfig, GroupMemory} from "../model";
+import {ChatHistory, GroupConfig, GroupMemory} from "../model";
 
 import {getData} from "../utils/storage";
 
@@ -34,10 +34,10 @@ export function checkPrivilege(ext: seal.ExtInfo, ctx: seal.MsgContext, _msg: se
 
 export function checkData(_ext: seal.ExtInfo, ctx: seal.MsgContext, _msg: seal.Message, option: Option): [boolean, string] {
   const dataType = option.checkData.dataType;
-  const rawHistories: {
-    [key: string]: { [key: string]: any[] }
+  const histories: {
+    [key: string]: ChatHistory
   } = getData<{
-    [key: string]: { [key: string]: any[] }
+    [key: string]: ChatHistory
   }>("histories");
   const memories: {
     [key: string]: GroupMemory
@@ -46,7 +46,7 @@ export function checkData(_ext: seal.ExtInfo, ctx: seal.MsgContext, _msg: seal.M
   }>("memories");
   let historyExists = false;
   let memoryExists = false;
-  if (ctx.group.groupId in rawHistories && rawHistories[ctx.group.groupId]["messages"].length > 0) {
+  if (ctx.group.groupId in histories && histories[ctx.group.groupId].messages.length > 0) {
     historyExists = true;
   }
   if (ctx.group.groupId in memories && memories[ctx.group.groupId].length > 0) {

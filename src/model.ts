@@ -84,6 +84,30 @@ export class ChatHistory {
 
     return prompt;
   }
+
+  static deserializeFromJson(json: string): { [key: string]: ChatHistory } {
+    const result: { [key: string]: ChatHistory } = {};
+
+    const raw: { [key: string]: any } = JSON.parse(json);
+
+    for (const [key, data] of Object.entries(raw)) {
+      const chatHistory = new ChatHistory();
+
+      // 类型安全校验
+      if (Array.isArray(data?.messages)) {
+        chatHistory.messages = data.messages.map(msg => ({
+          role: msg.role,          // 默认值处理
+          nickname: msg.nickname,      // 防止undefined
+          id: msg.id,
+          content: msg.content
+        }));
+      }
+
+      result[key] = chatHistory;
+    }
+
+    return result;
+  }
 }
 
 export type GroupConfig = {

@@ -1,5 +1,5 @@
 import {Option} from "./dispatcher";
-import {GroupConfig, GroupMemory} from "../model";
+import {ChatHistory, GroupConfig, GroupMemory} from "../model";
 import {formatMemory, replaceMarker} from "../utils/format";
 import {getData, setData} from "../utils/storage";
 
@@ -119,10 +119,10 @@ export function handleClear(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.M
   // Platform checked
   // Data checked
   // Privilege checked
-  const rawHistories: {
-    [key: string]: { [key: string]: any[] }
+  const histories: {
+    [key: string]: ChatHistory
   } = getData<{
-    [key: string]: { [key: string]: any[] }
+    [key: string]: ChatHistory
   }>("histories");
   const memories: {
     [key: string]: GroupMemory
@@ -132,30 +132,30 @@ export function handleClear(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.M
   const option = cmdArgs.getArgN(2);
   switch (option) {
     case "all": {
-      delete rawHistories[ctx.group.groupId];
+      delete histories[ctx.group.groupId];
       setData<{
-        [key: string]: { [key: string]: any[] }
-      }>(ext, "histories", rawHistories);
+        [key: string]: ChatHistory
+      }>(ext, "histories", histories);
       seal.replyToSender(ctx, msg, "群内记录的全部聊天内容清除了");
       return seal.ext.newCmdExecuteResult(true);
     }
     case "users": {
-      rawHistories[ctx.group.groupId]["messages"] = rawHistories[ctx.group.groupId]["messages"].filter((message) => {
+      histories[ctx.group.groupId].messages = histories[ctx.group.groupId].messages.filter((message) => {
         return message.role !== "user"
       });
       setData<{
-        [key: string]: { [key: string]: any[] }
-      }>(ext, "histories", rawHistories);
+        [key: string]: ChatHistory
+      }>(ext, "histories", histories);
       seal.replyToSender(ctx, msg, "群内记录的用户聊天内容清除了");
       return seal.ext.newCmdExecuteResult(true);
     }
     case "assistant": {
-      rawHistories[ctx.group.groupId]["messages"] = rawHistories[ctx.group.groupId]["messages"].filter((message) => {
+      histories[ctx.group.groupId].messages = histories[ctx.group.groupId].messages.filter((message) => {
         return message.role !== "assistant"
       });
       setData<{
-        [key: string]: { [key: string]: any[] }
-      }>(ext, "histories", rawHistories);
+        [key: string]: ChatHistory
+      }>(ext, "histories", histories);
       seal.replyToSender(ctx, msg, "群内记录的骰子聊天内容清除了");
       return seal.ext.newCmdExecuteResult(true);
     }
@@ -178,10 +178,10 @@ export function handleClear(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.M
 export function handleShow(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Message, cmdArgs: seal.CmdArgs): seal.CmdExecuteResult {
   // Platform checked
   // Data checked
-  const rawHistories: {
-    [key: string]: { [key: string]: any[] }
+  const histories: {
+    [key: string]: ChatHistory
   } = getData<{
-    [key: string]: { [key: string]: any[] }
+    [key: string]: ChatHistory
   }>("histories");
   const memories: {
     [key: string]: GroupMemory
@@ -203,17 +203,17 @@ export function handleShow(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Me
       return seal.ext.newCmdExecuteResult(true);
     }
     const num = Number(numStr);
-    if (num < 1 || num > rawHistories[ctx.group.groupId]["messages"].length) {
+    if (num < 1 || num > histories[ctx.group.groupId].messages.length) {
       seal.replyToSender(ctx, msg, "数字超过现有历史记录范围");
       return seal.ext.newCmdExecuteResult(true);
     }
     seal.replyToSender(ctx, msg, replaceMarker(
-      rawHistories[ctx.group.groupId]["messages"][rawHistories[ctx.group.groupId]["messages"].length - num] === "user" ?
+      histories[ctx.group.groupId].messages[histories[ctx.group.groupId].messages.length - num].role === "user" ?
         seal.ext.getStringConfig(ext, "user_schema") :
         seal.ext.getStringConfig(ext, "assistant_schema"),
-      rawHistories[ctx.group.groupId]["messages"][rawHistories[ctx.group.groupId]["messages"].length - num].nickname,
-      rawHistories[ctx.group.groupId]["messages"][rawHistories[ctx.group.groupId]["messages"].length - num].id,
-      rawHistories[ctx.group.groupId]["messages"][rawHistories[ctx.group.groupId]["messages"].length - num].content,
+      histories[ctx.group.groupId].messages[histories[ctx.group.groupId].messages.length - num].nickname,
+      histories[ctx.group.groupId].messages[histories[ctx.group.groupId].messages.length - num].id,
+      histories[ctx.group.groupId].messages[histories[ctx.group.groupId].messages.length - num].content,
       formatMemory(memories[ctx.group.groupId]),
     ));
     return seal.ext.newCmdExecuteResult(true);
@@ -224,10 +224,10 @@ export function handleDelete(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.
   // Platform checked
   // Data checked
   // Privilege checked
-  const rawHistories: {
-    [key: string]: { [key: string]: any[] }
+  const histories: {
+    [key: string]: ChatHistory
   } = getData<{
-    [key: string]: { [key: string]: any[] }
+    [key: string]: ChatHistory
   }>("histories");
   const memories: {
     [key: string]: GroupMemory
@@ -258,14 +258,14 @@ export function handleDelete(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.
       return seal.ext.newCmdExecuteResult(true);
     }
     const num = Number(numStr);
-    if (num < 1 || num > rawHistories[ctx.group.groupId]["messages"].length) {
+    if (num < 1 || num > histories[ctx.group.groupId].messages.length) {
       seal.replyToSender(ctx, msg, "数字超过现有历史记录范围");
       return seal.ext.newCmdExecuteResult(true);
     }
-    rawHistories[ctx.group.groupId]["messages"].splice(rawHistories[ctx.group.groupId]["messages"].length - num, 1);
+    histories[ctx.group.groupId].messages.splice(histories[ctx.group.groupId].messages.length - num, 1);
     setData<{
-      [key: string]: { [key: string]: any[] }
-    }>(ext, "histories", rawHistories);
+      [key: string]: ChatHistory
+    }>(ext, "histories", histories);
     seal.replyToSender(ctx, msg, `倒数第 ${num} 条聊天记录清除了`);
     return seal.ext.newCmdExecuteResult(true);
   }
