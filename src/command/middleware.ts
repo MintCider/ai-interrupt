@@ -1,6 +1,7 @@
 import {Option} from "./dispatcher";
 import {GroupConfig, GroupMemory} from "../model";
-import {storageGet} from "../util";
+
+import {storageGet} from "../utils/storage";
 
 export function checkPlatform(_ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Message, _option: Option): [boolean, string] {
   if (msg.platform !== "QQ" || ctx.isPrivate) {

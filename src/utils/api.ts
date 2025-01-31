@@ -1,4 +1,4 @@
-import {GroupMemory, ImagePromptMessage, PromptMessage} from "./model";
+import {ImagePromptMessage, PromptMessage} from "../model";
 
 export function bodyBuilder(prompt: PromptMessage[] | ImagePromptMessage[], customBody: boolean, customBodyText: string, model: string, maxTokens: number, temperature: number, topP: number): any | null {
   let postBody: any;
@@ -74,28 +74,6 @@ export async function requestImageCustomAPI(URL: string, imageCustomAPIURL: stri
   return data?.data ?? null;
 }
 
-export function storageGet(ext: seal.ExtInfo, key: string): string {
-  let result = ext.storageGet(key);
-  if (result) {
-    return result
-  } else {
-    return "{}"
-  }
-}
-
-export function storageSet(ext: seal.ExtInfo, key: string, content: string): void {
-  ext.storageSet(key, content);
-}
-
-export function replaceMarker(raw: string, nickname: string, id: string, message: string, memory: string): string {
-  return raw
-    .replace(/<nickname>/g, nickname)
-    .replace(/<id>/g, id)
-    .replace(/<message>/g, message)
-    .replace(/<memory>/g, memory)
-    .replace(/<time>/g, Date().toString());
-}
-
 function buildImagePrompt(imageURL: string, systemPrompt: string): ImagePromptMessage[] {
   const result: ImagePromptMessage[] = [{
     role: "system",
@@ -152,13 +130,4 @@ export async function replaceCQImage(raw: string, systemPrompt: string, URL: str
     }
     return match;
   })
-}
-
-export function formatMemory(memory: GroupMemory): string {
-  let result = ""
-  for (let i = 0; i < memory.length; i++) {
-    result += `${i + 1}. ${memory[i]}\n`;
-  }
-  result = result.slice(0, -1);
-  return result ? result : "无";
 }

@@ -1,6 +1,7 @@
 import {Option} from "./dispatcher";
-import {formatMemory, replaceMarker, storageGet, storageSet} from "../util";
 import {GroupConfig, GroupMemory} from "../model";
+import {formatMemory, replaceMarker} from "../utils/format";
+import {storageGet, storageSet} from "../utils/storage";
 
 export function genNullOption(_ext: seal.ExtInfo, _ctx: seal.MsgContext, _msg: seal.Message, _cmdArgs: seal.CmdArgs): Option {
   return {

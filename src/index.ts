@@ -1,14 +1,3 @@
-import {ChatHistory, GroupConfig, GroupMemory} from "./model";
-import {
-  bodyBuilder,
-  formatMemory,
-  replaceCQImage,
-  replaceMarker,
-  requestAPI,
-  storageGet,
-  storageSet
-} from "./util";
-import {helpStr} from "./data";
 import {dispatcher, setCommand} from "./command/dispatcher";
 import {
   genClearShowDeleteOption,
@@ -24,6 +13,11 @@ import {
   handleUnset
 } from "./command/handler";
 import {checkData, checkPlatform, checkPrivilege} from "./command/middleware";
+import {helpStr} from "./data";
+import {ChatHistory, GroupConfig, GroupMemory} from "./model";
+import {bodyBuilder, replaceCQImage, requestAPI} from "./utils/api";
+import {formatMemory, replaceMarker} from "./utils/format";
+import {storageGet, storageSet} from "./utils/storage";
 
 function registerConfigs(ext: seal.ExtInfo): void {
   seal.ext.registerStringConfig(ext, "---------------------------- 基础设置 ----------------------------", "本配置项无实际意义");
