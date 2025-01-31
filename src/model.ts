@@ -95,7 +95,7 @@ export class ChatHistory {
 
       // 类型安全校验
       if (Array.isArray(data?.messages)) {
-        chatHistory.messages = data.messages.map(msg => ({
+        chatHistory.messages = data.messages.map((msg: Message) => ({
           role: msg.role,          // 默认值处理
           nickname: msg.nickname,      // 防止undefined
           id: msg.id,

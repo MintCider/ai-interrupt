@@ -17,7 +17,7 @@ import {helpStr} from "./data";
 import {ChatHistory, GroupConfig, GroupMemory} from "./model";
 import {bodyBuilder, replaceCQImage, requestAPI} from "./utils/api";
 import {formatMemory, replaceMarker} from "./utils/format";
-import {initializeStore, storageGet, storageSet} from "./utils/storage";
+import {getData, initializeStore, setData} from "./utils/storage";
 
 function registerConfigs(ext: seal.ExtInfo): void {
   seal.ext.registerStringConfig(ext, "---------------------------- 基础设置 ----------------------------", "本配置项无实际意义");
@@ -101,9 +101,11 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
   if (msg.platform !== "QQ" || ctx.isPrivate || ctx.group.logOn) {
     return;
   }
-  let switches: {
+  const switches: {
     [key: string]: boolean
-  } = JSON.parse(storageGet(ext, "switches"));
+  } = getData<{
+    [key: string]: boolean
+  }>("switches");
   if (!(ctx.group.groupId in switches) || switches[ctx.group.groupId] === false) {
     return
   }
@@ -112,32 +114,24 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
   }
 
   // Load chat histories
-  const rawHistories: {
-    [key: string]: { [key: string]: any[] }
-  } = JSON.parse(storageGet(ext, "histories"));
-  const currentHistory: ChatHistory = new ChatHistory();
-
-  // Check data validity
-  let valid = true;
-  if (ctx.group.groupId in rawHistories) {
-    for (const message of rawHistories[ctx.group.groupId]["messages"]) {
-      valid = message.role && message.id && message.content;
-    }
-    if (!valid) {
-      switches[ctx.group.groupId] = false;
-      storageSet(ext, "switches", JSON.stringify(switches));
-      seal.replyToSender(ctx, msg, "AI 插嘴：数据有误，请考虑回退插件版本，或使用 .interrupt clear all 清空保存的聊天记录。本插件已自动关闭，可使用 .interrupt on 开启。");
-      return
-    }
-    currentHistory.messages = rawHistories[ctx.group.groupId]["messages"];
-  } else {
-    rawHistories[ctx.group.groupId] = {};
+  const histories: {
+    [key: string]: ChatHistory
+  } = getData<{
+    [key: string]: ChatHistory
+  }>("histories");
+  if (!(ctx.group.groupId in histories)) {
+    histories[ctx.group.groupId] = new ChatHistory();
+    setData<{
+      [key: string]: ChatHistory
+    }>(ext, "histories", histories);
   }
 
   // Load group configs
   const configs: {
     [key: string]: GroupConfig
-  } = JSON.parse(storageGet(ext, "configs"));
+  } = getData<{
+    [key: string]: GroupConfig
+  }>("configs");
   let possibility = configs[ctx.group.groupId] && configs[ctx.group.groupId].possibility ?
     configs[ctx.group.groupId].possibility : seal.ext.getFloatConfig(ext, "possibility");
   const historyLength = configs[ctx.group.groupId] && configs[ctx.group.groupId].historyLength ?
@@ -146,6 +140,7 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
     configs[ctx.group.groupId].triggerLength : seal.ext.getIntConfig(ext, "trigger_length");
 
   // Check global configs' validity
+  let valid = true;
   let missingConfig = "";
   if (!seal.ext.getStringConfig(ext, "nickname")) {
     valid = false;
@@ -169,7 +164,9 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
   }
   if (!valid) {
     switches[ctx.group.groupId] = false;
-    storageSet(ext, "switches", JSON.stringify(switches));
+    setData<{
+      [key: string]: boolean
+    }>(ext, "switches", switches);
     seal.replyToSender(ctx, msg, `AI 插嘴：插件配置项缺少：${missingConfig}。请联系骰主。本插件已自动关闭，可使用 .interrupt on 开启。`);
     return
   }
@@ -193,9 +190,10 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
       seal.ext.getStringConfig(ext, "image_custom_api_url"),
     )
   }
-  currentHistory.addMessageUser(userMessage, ctx.player.name, msg.sender.userId.slice(3), historyLength);
-  rawHistories[ctx.group.groupId]["messages"] = currentHistory.messages;
-  storageSet(ext, "histories", JSON.stringify(rawHistories));
+  histories[ctx.group.groupId].addMessageUser(userMessage, ctx.player.name, msg.sender.userId.slice(3), historyLength);
+  setData<{
+    [key: string]: ChatHistory
+  }>(ext, "histories", histories);
 
   // Trigger
   let trigger = false;
@@ -211,18 +209,23 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
       break;
     }
   }
-  trigger = trigger || (currentHistory.getLength() >= triggerLength && Math.random() < possibility);
+  trigger = trigger || (histories[ctx.group.groupId].getLength() >= triggerLength && Math.random() < possibility);
   if (trigger) {
     // Load group memories
     const memories: {
       [key: string]: GroupMemory
-    } = JSON.parse(storageGet(ext, "memories"));
+    } = getData<{
+      [key: string]: GroupMemory
+    }>("memories");
     if (!(ctx.group.groupId in memories)) {
       memories[ctx.group.groupId] = [];
+      setData<{
+        [key: string]: GroupMemory
+      }>(ext, "memories", memories);
     }
     // Format request body
     const reqBody = bodyBuilder(
-      currentHistory.buildPrompt(
+      histories[ctx.group.groupId].buildPrompt(
         seal.ext.getBoolConfig(ext, "system_schema_switch"),
         replaceMarker(
           seal.ext.getStringConfig(ext, "system_schema"),
@@ -283,7 +286,9 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
         }
         memories[ctx.group.groupId] = memories[ctx.group.groupId].filter((item) => item !== memory);
       }
-      storageSet(ext, "memories", JSON.stringify(memories));
+      setData<{
+        [key: string]: GroupMemory
+      }>(ext, "memories", memories);
       // Remove matched
       resp = resp
         .replace(memoryMatchExpr, "")
@@ -305,14 +310,15 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
       if (!assistantMessage) {
         continue;
       }
-      currentHistory.addMessageAssistant(
+      histories[ctx.group.groupId].addMessageAssistant(
         assistantMessage,
         seal.ext.getStringConfig(ext, "nickname"),
         seal.ext.getStringConfig(ext, "id"),
         historyLength
       );
-      rawHistories[ctx.group.groupId]["messages"] = currentHistory.messages;
-      storageSet(ext, "histories", JSON.stringify(rawHistories));
+      setData<{
+        [key: string]: ChatHistory
+      }>(ext, "histories", histories);
       seal.replyToSender(ctx, msg, `${seal.ext.getBoolConfig(ext, 'reply') ? `[CQ:reply,id=${userMessageID}]` : ""}${assistantMessage}`);
       if (!seal.ext.getBoolConfig(ext, "regexp_g")) {
         break;

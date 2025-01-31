@@ -46,7 +46,7 @@ export function checkData(_ext: seal.ExtInfo, ctx: seal.MsgContext, _msg: seal.M
   }>("memories");
   let historyExists = false;
   let memoryExists = false;
-  if (ctx.group.groupId in histories && histories[ctx.group.groupId].messages.length > 0) {
+  if (ctx.group.groupId in histories && histories[ctx.group.groupId].getLength() > 0) {
     historyExists = true;
   }
   if (ctx.group.groupId in memories && memories[ctx.group.groupId].length > 0) {

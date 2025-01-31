@@ -203,17 +203,17 @@ export function handleShow(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Me
       return seal.ext.newCmdExecuteResult(true);
     }
     const num = Number(numStr);
-    if (num < 1 || num > histories[ctx.group.groupId].messages.length) {
+    if (num < 1 || num > histories[ctx.group.groupId].getLength()) {
       seal.replyToSender(ctx, msg, "数字超过现有历史记录范围");
       return seal.ext.newCmdExecuteResult(true);
     }
     seal.replyToSender(ctx, msg, replaceMarker(
-      histories[ctx.group.groupId].messages[histories[ctx.group.groupId].messages.length - num].role === "user" ?
+      histories[ctx.group.groupId].messages[histories[ctx.group.groupId].getLength() - num].role === "user" ?
         seal.ext.getStringConfig(ext, "user_schema") :
         seal.ext.getStringConfig(ext, "assistant_schema"),
-      histories[ctx.group.groupId].messages[histories[ctx.group.groupId].messages.length - num].nickname,
-      histories[ctx.group.groupId].messages[histories[ctx.group.groupId].messages.length - num].id,
-      histories[ctx.group.groupId].messages[histories[ctx.group.groupId].messages.length - num].content,
+      histories[ctx.group.groupId].messages[histories[ctx.group.groupId].getLength() - num].nickname,
+      histories[ctx.group.groupId].messages[histories[ctx.group.groupId].getLength() - num].id,
+      histories[ctx.group.groupId].messages[histories[ctx.group.groupId].getLength() - num].content,
       formatMemory(memories[ctx.group.groupId]),
     ));
     return seal.ext.newCmdExecuteResult(true);
@@ -258,11 +258,11 @@ export function handleDelete(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.
       return seal.ext.newCmdExecuteResult(true);
     }
     const num = Number(numStr);
-    if (num < 1 || num > histories[ctx.group.groupId].messages.length) {
+    if (num < 1 || num > histories[ctx.group.groupId].getLength()) {
       seal.replyToSender(ctx, msg, "数字超过现有历史记录范围");
       return seal.ext.newCmdExecuteResult(true);
     }
-    histories[ctx.group.groupId].messages.splice(histories[ctx.group.groupId].messages.length - num, 1);
+    histories[ctx.group.groupId].messages.splice(histories[ctx.group.groupId].getLength() - num, 1);
     setData<{
       [key: string]: ChatHistory
     }>(ext, "histories", histories);
