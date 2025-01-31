@@ -1,7 +1,7 @@
 import {Option} from "./dispatcher";
 import {GroupConfig, GroupMemory} from "../model";
 import {formatMemory, replaceMarker} from "../utils/format";
-import {storageGet, storageSet} from "../utils/storage";
+import {getData, setData} from "../utils/storage";
 
 export function genNullOption(_ext: seal.ExtInfo, _ctx: seal.MsgContext, _msg: seal.Message, _cmdArgs: seal.CmdArgs): Option {
   return {
@@ -74,9 +74,13 @@ export function handleOn(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Mess
   // Privilege checked
   const switches: {
     [key: string]: boolean
-  } = JSON.parse(storageGet(ext, "switches"));
+  } = getData<{
+    [key: string]: boolean
+  }>("switches");
   switches[ctx.group.groupId] = true;
-  storageSet(ext, "switches", JSON.stringify(switches));
+  setData<{
+    [key: string]: boolean
+  }>(ext, "switches", switches);
   seal.replyToSender(ctx, msg, "群内 AI 插嘴功能开启了");
   return seal.ext.newCmdExecuteResult(true);
 }
@@ -86,17 +90,23 @@ export function handleOff(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Mes
   // Privilege checked
   const switches: {
     [key: string]: boolean
-  } = JSON.parse(storageGet(ext, "switches"));
+  } = getData<{
+    [key: string]: boolean
+  }>("switches");
   switches[ctx.group.groupId] = false;
-  storageSet(ext, "switches", JSON.stringify(switches));
+  setData<{
+    [key: string]: boolean
+  }>(ext, "switches", switches);
   seal.replyToSender(ctx, msg, "群内 AI 插嘴功能关闭了");
   return seal.ext.newCmdExecuteResult(true);
 }
 
-export function handleStatus(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Message, _cmdArgs: seal.CmdArgs): seal.CmdExecuteResult {
+export function handleStatus(_ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Message, _cmdArgs: seal.CmdArgs): seal.CmdExecuteResult {
   const switches: {
     [key: string]: boolean
-  } = JSON.parse(storageGet(ext, "switches"));
+  } = getData<{
+    [key: string]: boolean
+  }>("switches");
   if (!(ctx.group.groupId in switches) || switches[ctx.group.groupId] === false) {
     seal.replyToSender(ctx, msg, "群内 AI 插嘴功能是关闭状态");
     return seal.ext.newCmdExecuteResult(true);
@@ -111,15 +121,21 @@ export function handleClear(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.M
   // Privilege checked
   const rawHistories: {
     [key: string]: { [key: string]: any[] }
-  } = JSON.parse(storageGet(ext, "histories"));
+  } = getData<{
+    [key: string]: { [key: string]: any[] }
+  }>("histories");
   const memories: {
     [key: string]: GroupMemory
-  } = JSON.parse(storageGet(ext, "memories"));
+  } = getData<{
+    [key: string]: GroupMemory
+  }>("memories");
   const option = cmdArgs.getArgN(2);
   switch (option) {
     case "all": {
       delete rawHistories[ctx.group.groupId];
-      storageSet(ext, "histories", JSON.stringify(rawHistories));
+      setData<{
+        [key: string]: { [key: string]: any[] }
+      }>(ext, "histories", rawHistories);
       seal.replyToSender(ctx, msg, "群内记录的全部聊天内容清除了");
       return seal.ext.newCmdExecuteResult(true);
     }
@@ -127,7 +143,9 @@ export function handleClear(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.M
       rawHistories[ctx.group.groupId]["messages"] = rawHistories[ctx.group.groupId]["messages"].filter((message) => {
         return message.role !== "user"
       });
-      storageSet(ext, "histories", JSON.stringify(rawHistories));
+      setData<{
+        [key: string]: { [key: string]: any[] }
+      }>(ext, "histories", rawHistories);
       seal.replyToSender(ctx, msg, "群内记录的用户聊天内容清除了");
       return seal.ext.newCmdExecuteResult(true);
     }
@@ -135,13 +153,17 @@ export function handleClear(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.M
       rawHistories[ctx.group.groupId]["messages"] = rawHistories[ctx.group.groupId]["messages"].filter((message) => {
         return message.role !== "assistant"
       });
-      storageSet(ext, "histories", JSON.stringify(rawHistories));
+      setData<{
+        [key: string]: { [key: string]: any[] }
+      }>(ext, "histories", rawHistories);
       seal.replyToSender(ctx, msg, "群内记录的骰子聊天内容清除了");
       return seal.ext.newCmdExecuteResult(true);
     }
     case "memory": {
       delete memories[ctx.group.groupId];
-      storageSet(ext, "memories", JSON.stringify(memories));
+      setData<{
+        [key: string]: GroupMemory
+      }>(ext, "memories", memories);
       seal.replyToSender(ctx, msg, "群内全部记忆清除了");
       return seal.ext.newCmdExecuteResult(true);
     }
@@ -158,10 +180,14 @@ export function handleShow(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Me
   // Data checked
   const rawHistories: {
     [key: string]: { [key: string]: any[] }
-  } = JSON.parse(storageGet(ext, "histories"));
+  } = getData<{
+    [key: string]: { [key: string]: any[] }
+  }>("histories");
   const memories: {
     [key: string]: GroupMemory
-  } = JSON.parse(storageGet(ext, "memories"));
+  } = getData<{
+    [key: string]: GroupMemory
+  }>("memories");
   // During .interrupt show <num>, it's possible that this function is called
   // before the existence of memory is checked.
   if (!(ctx.group.groupId in memories)) {
@@ -200,10 +226,14 @@ export function handleDelete(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.
   // Privilege checked
   const rawHistories: {
     [key: string]: { [key: string]: any[] }
-  } = JSON.parse(storageGet(ext, "histories"));
+  } = getData<{
+    [key: string]: { [key: string]: any[] }
+  }>("histories");
   const memories: {
     [key: string]: GroupMemory
-  } = JSON.parse(storageGet(ext, "memories"));
+  } = getData<{
+    [key: string]: GroupMemory
+  }>("memories");
   if (cmdArgs.getArgN(2) === "memory") {
     const numStr = cmdArgs.getArgN(3);
     if (!numStr.match(/^\d+$/)) {
@@ -216,7 +246,9 @@ export function handleDelete(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.
       return seal.ext.newCmdExecuteResult(true);
     }
     memories[ctx.group.groupId].splice(num - 1, 1);
-    storageSet(ext, "memories", JSON.stringify(memories));
+    setData<{
+      [key: string]: GroupMemory
+    }>(ext, "memories", memories);
     seal.replyToSender(ctx, msg, `第 ${num} 条记忆清除了`);
     return seal.ext.newCmdExecuteResult(true);
   } else {
@@ -231,7 +263,9 @@ export function handleDelete(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.
       return seal.ext.newCmdExecuteResult(true);
     }
     rawHistories[ctx.group.groupId]["messages"].splice(rawHistories[ctx.group.groupId]["messages"].length - num, 1);
-    storageSet(ext, "histories", JSON.stringify(rawHistories));
+    setData<{
+      [key: string]: { [key: string]: any[] }
+    }>(ext, "histories", rawHistories);
     seal.replyToSender(ctx, msg, `倒数第 ${num} 条聊天记录清除了`);
     return seal.ext.newCmdExecuteResult(true);
   }
@@ -242,7 +276,9 @@ export function handleSet(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Mes
   // Privilege checked
   const configs: {
     [key: string]: GroupConfig
-  } = JSON.parse(storageGet(ext, "configs"));
+  } = getData<{
+    [key: string]: GroupConfig
+  }>("configs");
   if (!(ctx.group.groupId in configs)) {
     configs[ctx.group.groupId] = {
       possibility: null,
@@ -292,7 +328,9 @@ export function handleSet(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Mes
       return seal.ext.newCmdExecuteResult(true);
     }
   }
-  storageSet(ext, "configs", JSON.stringify(configs));
+  setData<{
+    [key: string]: GroupConfig
+  }>(ext, "configs", configs);
   seal.replyToSender(ctx, msg, `群聊内 ${property} 属性已修改为 ${numStr}`);
   return seal.ext.newCmdExecuteResult(true);
 }
@@ -302,7 +340,9 @@ export function handleUnset(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.M
   // Privilege checked
   const configs: {
     [key: string]: GroupConfig
-  } = JSON.parse(storageGet(ext, "configs"));
+  } = getData<{
+    [key: string]: GroupConfig
+  }>("configs");
   if (!(ctx.group.groupId in configs)) {
     seal.replyToSender(ctx, msg, `群聊内未设置特殊属性`);
     return seal.ext.newCmdExecuteResult(true);
@@ -359,6 +399,8 @@ export function handleUnset(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.M
   if (!(config.possibility || config.historyLength || config.triggerLength || config.privilege)) {
     delete configs[ctx.group.groupId];
   }
-  storageSet(ext, "configs", JSON.stringify(configs));
+  setData<{
+    [key: string]: GroupConfig
+  }>(ext, "configs", configs);
   return seal.ext.newCmdExecuteResult(true);
 }

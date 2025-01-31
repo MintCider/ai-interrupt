@@ -1,7 +1,7 @@
 import {Option} from "./dispatcher";
 import {GroupConfig, GroupMemory} from "../model";
 
-import {storageGet} from "../utils/storage";
+import {getData} from "../utils/storage";
 
 export function checkPlatform(_ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Message, _option: Option): [boolean, string] {
   if (msg.platform !== "QQ" || ctx.isPrivate) {
@@ -13,7 +13,9 @@ export function checkPlatform(_ext: seal.ExtInfo, ctx: seal.MsgContext, msg: sea
 export function checkPrivilege(ext: seal.ExtInfo, ctx: seal.MsgContext, _msg: seal.Message, option: Option): [boolean, string] {
   const configs: {
     [key: string]: GroupConfig
-  } = JSON.parse(storageGet(ext, "configs"));
+  } = getData<{
+    [key: string]: GroupConfig
+  }>("configs");
   const privilegeType = option.checkPrivilege.privilegeType;
   let privilege: number;
   if (privilegeType === "origin") {
@@ -30,14 +32,18 @@ export function checkPrivilege(ext: seal.ExtInfo, ctx: seal.MsgContext, _msg: se
   return [true, ""];
 }
 
-export function checkData(ext: seal.ExtInfo, ctx: seal.MsgContext, _msg: seal.Message, option: Option): [boolean, string] {
+export function checkData(_ext: seal.ExtInfo, ctx: seal.MsgContext, _msg: seal.Message, option: Option): [boolean, string] {
   const dataType = option.checkData.dataType;
   const rawHistories: {
     [key: string]: { [key: string]: any[] }
-  } = JSON.parse(storageGet(ext, "histories"));
+  } = getData<{
+    [key: string]: { [key: string]: any[] }
+  }>("histories");
   const memories: {
     [key: string]: GroupMemory
-  } = JSON.parse(storageGet(ext, "memories"));
+  } = getData<{
+    [key: string]: GroupMemory
+  }>("memories");
   let historyExists = false;
   let memoryExists = false;
   if (ctx.group.groupId in rawHistories && rawHistories[ctx.group.groupId]["messages"].length > 0) {

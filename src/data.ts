@@ -11,3 +11,5 @@ export const helpStr =
   "- privilege\n" +
   ".interrupt unset <property> 将群内属性恢复默认配置。\n" +
   ".interrupt unset all 将群内全部属性都将恢复默认。";
+
+export const memoryStore = new Map<string, any>();

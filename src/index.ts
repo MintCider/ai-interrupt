@@ -17,7 +17,7 @@ import {helpStr} from "./data";
 import {ChatHistory, GroupConfig, GroupMemory} from "./model";
 import {bodyBuilder, replaceCQImage, requestAPI} from "./utils/api";
 import {formatMemory, replaceMarker} from "./utils/format";
-import {storageGet, storageSet} from "./utils/storage";
+import {initializeStore, storageGet, storageSet} from "./utils/storage";
 
 function registerConfigs(ext: seal.ExtInfo): void {
   seal.ext.registerStringConfig(ext, "---------------------------- 基础设置 ----------------------------", "本配置项无实际意义");
@@ -330,6 +330,8 @@ function main() {
     registerCommand(ext);
     seal.ext.register(ext);
     registerConfigs(ext);
+
+    initializeStore(ext);
 
     ext.onNotCommandReceived = async (ctx: seal.MsgContext, msg: seal.Message) => {
       await onNotCommandReceived(ext, ctx, msg);
