@@ -28,8 +28,8 @@ function registerConfigs(ext: seal.ExtInfo): void {
   seal.ext.registerStringConfig(ext, "nickname", "", "骰子昵称");
   seal.ext.registerStringConfig(ext, "id", "", "骰子 QQ 号");
   seal.ext.registerBoolConfig(ext, "react_at", true, "被 @ 时是否必定回复（无论历史记录长短）");
-  seal.ext.registerTemplateConfig(ext, "trigger_words", [""], "提升插嘴概率的正则表达式");
-  seal.ext.registerTemplateConfig(ext, "trigger_words_possibility", [""], "对应正则表达式提升的概率");
+  seal.ext.registerTemplateConfig(ext, "trigger_expr", [""], "提升插嘴概率的正则表达式");
+  seal.ext.registerTemplateConfig(ext, "trigger_expr_possibility", [""], "对应正则表达式提升的概率");
   seal.ext.registerBoolConfig(ext, "reply", false, "插嘴时是否回复触发消息");
   seal.ext.registerBoolConfig(ext, "debug_prompt", false, "打印 prompt 日志");
   seal.ext.registerBoolConfig(ext, "debug_resp", true, "打印 API Response 日志");
@@ -202,10 +202,10 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
     trigger = seal.ext.getBoolConfig(ext, "react_at");
   }
   // Check trigger words
-  for (let i = 0; i < seal.ext.getTemplateConfig(ext, "keywords").length; i++) {
-    const keyword = new RegExp(seal.ext.getTemplateConfig(ext, "keywords")[i]);
+  for (let i = 0; i < seal.ext.getTemplateConfig(ext, "trigger_expr").length; i++) {
+    const keyword = new RegExp(seal.ext.getTemplateConfig(ext, "trigger_expr")[i]);
     if (keyword.test(msg.message)) {
-      possibility += Number(seal.ext.getTemplateConfig(ext, "keywords_possibility")[i]);
+      possibility += Number(seal.ext.getTemplateConfig(ext, "trigger_expr_possibility")[i]);
       break;
     }
   }
