@@ -31,6 +31,7 @@ function registerConfigs(ext: seal.ExtInfo): void {
   seal.ext.registerTemplateConfig(ext, "trigger_expr", [""], "提升插嘴概率的正则表达式");
   seal.ext.registerTemplateConfig(ext, "trigger_expr_possibility", [""], "对应正则表达式提升的概率");
   seal.ext.registerBoolConfig(ext, "reply", false, "插嘴时是否回复触发消息");
+  seal.ext.registerBoolConfig(ext, "debug_trigger", false, "打印触发概率日志");
   seal.ext.registerBoolConfig(ext, "debug_prompt", false, "打印 prompt 日志");
   seal.ext.registerBoolConfig(ext, "debug_resp", true, "打印 API Response 日志");
   seal.ext.registerStringConfig(ext, "---------------------------- 视觉大模型设置 ----------------------------", "本配置项无实际意义");
@@ -162,6 +163,10 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
     valid = false;
     missingConfig += missingConfig ? "、视觉大模型相关信息" : "视觉大模型相关信息";
   }
+  if (seal.ext.getTemplateConfig(ext, "trigger_expr").length !== seal.ext.getTemplateConfig(ext, "trigger_expr_possibility").length) {
+    valid = false;
+    missingConfig += missingConfig ? "、匹配的 trigger_expr 与 trigger_expr_possibility" : "匹配的 trigger_expr 与 trigger_expr_possibility";
+  }
   if (!valid) {
     switches[ctx.group.groupId] = false;
     setData<{
@@ -197,19 +202,31 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
 
   // Trigger
   let trigger = false;
+  let triggerDebugStr = `ai-interrupt: current possibility: ${possibility}, `;
   // Check at
   if (msg.message.includes(`[CQ:at,qq=${seal.ext.getStringConfig(ext, "id")}]`)) {
     trigger = seal.ext.getBoolConfig(ext, "react_at");
+    triggerDebugStr += `mentioned (at): true, react_at: ${trigger}, `;
+  } else {
+    triggerDebugStr += "mentioned (at): false, ";
   }
   // Check trigger words
   for (let i = 0; i < seal.ext.getTemplateConfig(ext, "trigger_expr").length; i++) {
     const keyword = new RegExp(seal.ext.getTemplateConfig(ext, "trigger_expr")[i]);
     if (keyword.test(msg.message)) {
       possibility += Number(seal.ext.getTemplateConfig(ext, "trigger_expr_possibility")[i]);
+      triggerDebugStr += `trigger expr match: ${seal.ext.getTemplateConfig(ext, "trigger_expr")[i]}, increase possibility by ${Number(seal.ext.getTemplateConfig(ext, "trigger_expr_possibility")[i])}, `;
       break;
     }
   }
-  trigger = trigger || (histories[ctx.group.groupId].getLength() >= triggerLength && Math.random() < possibility);
+  triggerDebugStr += `history long enough: ${histories[ctx.group.groupId].getLength() >= triggerLength}, `;
+  const random = Math.random();
+  triggerDebugStr += `random: ${random}, final possibility: ${possibility}, `;
+  trigger = trigger || (histories[ctx.group.groupId].getLength() >= triggerLength && random < possibility);
+  triggerDebugStr += `triggered: ${trigger}`;
+  if (seal.ext.getBoolConfig(ext, "debug_trigger")) {
+    console.log(triggerDebugStr);
+  }
   if (trigger) {
     // Load group memories
     const memories: {
