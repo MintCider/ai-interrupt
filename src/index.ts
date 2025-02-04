@@ -1,14 +1,3 @@
-import {ChatHistory, GroupConfig, GroupMemory} from "./model";
-import {
-  bodyBuilder,
-  formatMemory,
-  replaceCQImage,
-  replaceMarker,
-  requestAPI,
-  storageGet,
-  storageSet
-} from "./util";
-import {helpStr} from "./data";
 import {dispatcher, setCommand} from "./command/dispatcher";
 import {
   genClearShowDeleteOption,
@@ -24,6 +13,11 @@ import {
   handleUnset
 } from "./command/handler";
 import {checkData, checkPlatform, checkPrivilege} from "./command/middleware";
+import {helpStr} from "./data";
+import {ChatHistory, GroupConfig, GroupMemory} from "./model";
+import {bodyBuilder, replaceCQImage, requestAPI} from "./utils/api";
+import {formatMemory, replaceMarker} from "./utils/format";
+import {getData, initializeStore, setData} from "./utils/storage";
 
 function registerConfigs(ext: seal.ExtInfo): void {
   seal.ext.registerStringConfig(ext, "---------------------------- 基础设置 ----------------------------", "本配置项无实际意义");
@@ -34,7 +28,10 @@ function registerConfigs(ext: seal.ExtInfo): void {
   seal.ext.registerStringConfig(ext, "nickname", "", "骰子昵称");
   seal.ext.registerStringConfig(ext, "id", "", "骰子 QQ 号");
   seal.ext.registerBoolConfig(ext, "react_at", true, "被 @ 时是否必定回复（无论历史记录长短）");
+  seal.ext.registerTemplateConfig(ext, "trigger_expr", [""], "提升插嘴概率的正则表达式");
+  seal.ext.registerTemplateConfig(ext, "trigger_expr_possibility", [""], "对应正则表达式提升的概率");
   seal.ext.registerBoolConfig(ext, "reply", false, "插嘴时是否回复触发消息");
+  seal.ext.registerBoolConfig(ext, "debug_trigger", false, "打印触发概率日志");
   seal.ext.registerBoolConfig(ext, "debug_prompt", false, "打印 prompt 日志");
   seal.ext.registerBoolConfig(ext, "debug_resp", true, "打印 API Response 日志");
   seal.ext.registerStringConfig(ext, "---------------------------- 视觉大模型设置 ----------------------------", "本配置项无实际意义");
@@ -46,6 +43,8 @@ function registerConfigs(ext: seal.ExtInfo): void {
   seal.ext.registerIntConfig(ext, "image_max_tokens", 200, "视觉大模型的最大生成长度");
   seal.ext.registerFloatConfig(ext, "image_temperature", -1);
   seal.ext.registerFloatConfig(ext, "image_top_p", -1);
+  seal.ext.registerBoolConfig(ext, "image_custom_api", false, "是否使用自定义 API（格式详见 README）");
+  seal.ext.registerStringConfig(ext, "image_custom_api_url", "", "自定义 API 的 URL");
   seal.ext.registerStringConfig(ext, "---------------------------- 文本大模型设置 ----------------------------", "本配置项无实际意义");
   seal.ext.registerBoolConfig(ext, "multi_turn", false, "以多轮对话的形式请求 API");
   seal.ext.registerBoolConfig(ext, "system_schema_switch", true, "是否为文本大模型提供系统提示");
@@ -103,9 +102,11 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
   if (msg.platform !== "QQ" || ctx.isPrivate || ctx.group.logOn) {
     return;
   }
-  let switches: {
+  const switches: {
     [key: string]: boolean
-  } = JSON.parse(storageGet(ext, "switches"));
+  } = getData<{
+    [key: string]: boolean
+  }>("switches");
   if (!(ctx.group.groupId in switches) || switches[ctx.group.groupId] === false) {
     return
   }
@@ -114,33 +115,25 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
   }
 
   // Load chat histories
-  const rawHistories: {
-    [key: string]: { [key: string]: any[] }
-  } = JSON.parse(storageGet(ext, "histories"));
-  const currentHistory: ChatHistory = new ChatHistory();
-
-  // Check data validity
-  let valid = true;
-  if (ctx.group.groupId in rawHistories) {
-    for (const message of rawHistories[ctx.group.groupId]["messages"]) {
-      valid = message.role && message.id && message.content;
-    }
-    if (!valid) {
-      switches[ctx.group.groupId] = false;
-      storageSet(ext, "switches", JSON.stringify(switches));
-      seal.replyToSender(ctx, msg, "AI 插嘴：数据有误，请考虑回退插件版本，或使用 .interrupt clear all 清空保存的聊天记录。本插件已自动关闭，可使用 .interrupt on 开启。");
-      return
-    }
-    currentHistory.messages = rawHistories[ctx.group.groupId]["messages"];
-  } else {
-    rawHistories[ctx.group.groupId] = {};
+  const histories: {
+    [key: string]: ChatHistory
+  } = getData<{
+    [key: string]: ChatHistory
+  }>("histories");
+  if (!(ctx.group.groupId in histories)) {
+    histories[ctx.group.groupId] = new ChatHistory();
+    setData<{
+      [key: string]: ChatHistory
+    }>(ext, "histories", histories);
   }
 
   // Load group configs
   const configs: {
     [key: string]: GroupConfig
-  } = JSON.parse(storageGet(ext, "configs"));
-  const possibility = configs[ctx.group.groupId] && configs[ctx.group.groupId].possibility ?
+  } = getData<{
+    [key: string]: GroupConfig
+  }>("configs");
+  let possibility = configs[ctx.group.groupId] && configs[ctx.group.groupId].possibility ?
     configs[ctx.group.groupId].possibility : seal.ext.getFloatConfig(ext, "possibility");
   const historyLength = configs[ctx.group.groupId] && configs[ctx.group.groupId].historyLength ?
     configs[ctx.group.groupId].historyLength : seal.ext.getIntConfig(ext, "history_length");
@@ -148,6 +141,7 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
     configs[ctx.group.groupId].triggerLength : seal.ext.getIntConfig(ext, "trigger_length");
 
   // Check global configs' validity
+  let valid = true;
   let missingConfig = "";
   if (!seal.ext.getStringConfig(ext, "nickname")) {
     valid = false;
@@ -169,9 +163,15 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
     valid = false;
     missingConfig += missingConfig ? "、视觉大模型相关信息" : "视觉大模型相关信息";
   }
+  if (seal.ext.getTemplateConfig(ext, "trigger_expr").length !== seal.ext.getTemplateConfig(ext, "trigger_expr_possibility").length) {
+    valid = false;
+    missingConfig += missingConfig ? "、匹配的 trigger_expr 与 trigger_expr_possibility" : "匹配的 trigger_expr 与 trigger_expr_possibility";
+  }
   if (!valid) {
     switches[ctx.group.groupId] = false;
-    storageSet(ext, "switches", JSON.stringify(switches));
+    setData<{
+      [key: string]: boolean
+    }>(ext, "switches", switches);
     seal.replyToSender(ctx, msg, `AI 插嘴：插件配置项缺少：${missingConfig}。请联系骰主。本插件已自动关闭，可使用 .interrupt on 开启。`);
     return
   }
@@ -190,31 +190,59 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
       seal.ext.getFloatConfig(ext, "image_temperature"),
       seal.ext.getFloatConfig(ext, "image_top_p"),
       seal.ext.getBoolConfig(ext, "debug_prompt"),
-      seal.ext.getBoolConfig(ext, "debug_resp")
+      seal.ext.getBoolConfig(ext, "debug_resp"),
+      seal.ext.getBoolConfig(ext, "image_custom_api"),
+      seal.ext.getStringConfig(ext, "image_custom_api_url"),
     )
   }
-  currentHistory.addMessageUser(userMessage, msg.sender.nickname, msg.sender.userId.slice(3), historyLength);
-  rawHistories[ctx.group.groupId]["messages"] = currentHistory.messages;
-  storageSet(ext, "histories", JSON.stringify(rawHistories));
-  let at = false;
+  histories[ctx.group.groupId].addMessageUser(userMessage, ctx.player.name, msg.sender.userId.slice(3), historyLength);
+  setData<{
+    [key: string]: ChatHistory
+  }>(ext, "histories", histories);
+
+  // Trigger
+  let trigger = false;
+  let triggerDebugStr = `ai-interrupt: current possibility: ${possibility}, `;
+  // Check at
   if (msg.message.includes(`[CQ:at,qq=${seal.ext.getStringConfig(ext, "id")}]`)) {
-    at = seal.ext.getBoolConfig(ext, "react_at");
+    trigger = seal.ext.getBoolConfig(ext, "react_at");
+    triggerDebugStr += `mentioned (at): true, react_at: ${trigger}, `;
+  } else {
+    triggerDebugStr += "mentioned (at): false, ";
   }
-  // Check reply condition
-  if (at || (
-    currentHistory.getLength() >= triggerLength
-    && Math.random() < possibility
-  )) {
+  // Check trigger words
+  for (let i = 0; i < seal.ext.getTemplateConfig(ext, "trigger_expr").length; i++) {
+    const keyword = new RegExp(seal.ext.getTemplateConfig(ext, "trigger_expr")[i]);
+    if (keyword.test(msg.message)) {
+      possibility += Number(seal.ext.getTemplateConfig(ext, "trigger_expr_possibility")[i]);
+      triggerDebugStr += `trigger expr match: ${seal.ext.getTemplateConfig(ext, "trigger_expr")[i]}, increase possibility by ${Number(seal.ext.getTemplateConfig(ext, "trigger_expr_possibility")[i])}, `;
+      break;
+    }
+  }
+  triggerDebugStr += `history long enough: ${histories[ctx.group.groupId].getLength() >= triggerLength}, `;
+  const random = Math.random();
+  triggerDebugStr += `random: ${random}, final possibility: ${possibility}, `;
+  trigger = trigger || (histories[ctx.group.groupId].getLength() >= triggerLength && random < possibility);
+  triggerDebugStr += `triggered: ${trigger}`;
+  if (seal.ext.getBoolConfig(ext, "debug_trigger")) {
+    console.log(triggerDebugStr);
+  }
+  if (trigger) {
     // Load group memories
     const memories: {
       [key: string]: GroupMemory
-    } = JSON.parse(storageGet(ext, "memories"));
+    } = getData<{
+      [key: string]: GroupMemory
+    }>("memories");
     if (!(ctx.group.groupId in memories)) {
       memories[ctx.group.groupId] = [];
+      setData<{
+        [key: string]: GroupMemory
+      }>(ext, "memories", memories);
     }
     // Format request body
     const reqBody = bodyBuilder(
-      currentHistory.buildPrompt(
+      histories[ctx.group.groupId].buildPrompt(
         seal.ext.getBoolConfig(ext, "system_schema_switch"),
         replaceMarker(
           seal.ext.getStringConfig(ext, "system_schema"),
@@ -275,7 +303,9 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
         }
         memories[ctx.group.groupId] = memories[ctx.group.groupId].filter((item) => item !== memory);
       }
-      storageSet(ext, "memories", JSON.stringify(memories));
+      setData<{
+        [key: string]: GroupMemory
+      }>(ext, "memories", memories);
       // Remove matched
       resp = resp
         .replace(memoryMatchExpr, "")
@@ -297,14 +327,15 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
       if (!assistantMessage) {
         continue;
       }
-      currentHistory.addMessageAssistant(
+      histories[ctx.group.groupId].addMessageAssistant(
         assistantMessage,
         seal.ext.getStringConfig(ext, "nickname"),
         seal.ext.getStringConfig(ext, "id"),
         historyLength
       );
-      rawHistories[ctx.group.groupId]["messages"] = currentHistory.messages;
-      storageSet(ext, "histories", JSON.stringify(rawHistories));
+      setData<{
+        [key: string]: ChatHistory
+      }>(ext, "histories", histories);
       seal.replyToSender(ctx, msg, `${seal.ext.getBoolConfig(ext, 'reply') ? `[CQ:reply,id=${userMessageID}]` : ""}${assistantMessage}`);
       if (!seal.ext.getBoolConfig(ext, "regexp_g")) {
         break;
@@ -317,11 +348,13 @@ function main() {
   // 注册扩展
   let ext = seal.ext.find("ai-interrupt");
   if (!ext) {
-    ext = seal.ext.new("ai-interrupt", "Mint Cider", "0.5.1");
+    ext = seal.ext.new("ai-interrupt", "Mint Cider", "0.6.0");
 
     registerCommand(ext);
     seal.ext.register(ext);
     registerConfigs(ext);
+
+    initializeStore(ext);
 
     ext.onNotCommandReceived = async (ctx: seal.MsgContext, msg: seal.Message) => {
       await onNotCommandReceived(ext, ctx, msg);
