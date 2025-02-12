@@ -59,12 +59,13 @@ function registerConfigs(ext: seal.ExtInfo): void {
   seal.ext.registerStringConfig(ext, "user_schema", "<nickname>（<id>）：<message>", "文本大模型的用户消息 prompt 格式");
   seal.ext.registerStringConfig(ext, "assistant_schema", "<nickname>（<id>）：<message>", "文本大模型的骰子消息 prompt 格式");
   seal.ext.registerStringConfig(ext, "retrieve_schema", "<nickname>（<id>）：(.*)", "从大模型回复提取骰子消息的正则表达式（**注意区分全角半角**）");
+  seal.ext.registerTemplateConfig(ext, "filter_schema", ["<think>[\\s\\S]*</think>"], "从大模型回复过滤内容的正则表达式");
   seal.ext.registerBoolConfig(ext, "memory_switch", false, "是否启用记忆功能");
   seal.ext.registerStringConfig(ext, "memory_schema", "\\[memory\\](.*)\\[/memory\\]", "从大模型回复提取记忆的正则表达式（**注意区分全角半角**）");
   seal.ext.registerStringConfig(ext, "delete_memory_schema", "\\[delete\\](.*)\\[/delete\\]", "从大模型回复删除记忆的正则表达式（**注意区分全角半角**）");
-  // seal.ext.registerBoolConfig(ext, "regexp_s", false, "提取回复时，允许通配符（.）匹配换行符（\\n）（暂不可用）");
   seal.ext.registerBoolConfig(ext, "regexp_g", false, "提取回复时，处理多个匹配项");
   seal.ext.registerBoolConfig(ext, "regexp_m", false, "提取回复时，使用多行模式");
+  seal.ext.registerIntConfig(ext, "regexp_group_num", 1, "提取回复时，使用的匹配组号");
   seal.ext.registerStringConfig(ext, "request_URL", "", "文本大模型的 API URL");
   seal.ext.registerStringConfig(ext, "key", "", "文本大模型的 API Key");
   seal.ext.registerStringConfig(ext, "model", "", "文本大模型的型号");
@@ -314,6 +315,16 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
         .trim();
     }
     // Handle assistant message
+    for (const filterRaw of seal.ext.getTemplateConfig(ext, "filter_schema")) {
+      const filter = new RegExp(replaceMarker(
+        filterRaw,
+        seal.ext.getStringConfig(ext, "nickname"),
+        seal.ext.getStringConfig(ext, "id"),
+        "",
+        "",
+      ), seal.ext.getBoolConfig(ext, "regexp_m") ? "gm" : "g");
+      resp = resp.replace(filter, "");
+    }
     const retrieveMatchExpr = new RegExp(replaceMarker(
       seal.ext.getStringConfig(ext, "retrieve_schema"),
       seal.ext.getStringConfig(ext, "nickname"),
@@ -323,7 +334,7 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
     ), seal.ext.getBoolConfig(ext, "regexp_m") ? "gm" : "g");
     const retrieveMatchResult = [...resp.matchAll(retrieveMatchExpr)];
     for (const match of retrieveMatchResult) {
-      const assistantMessage = match?.[1] ?? "";
+      const assistantMessage = match?.[seal.ext.getIntConfig(ext, "regexp_group_num")] ?? "";
       if (!assistantMessage) {
         continue;
       }
