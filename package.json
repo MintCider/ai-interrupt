@@ -1,6 +1,6 @@
 {
   "name": "ai-interrupt",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "repository": "https://github.com/MintCider/ai-interrupt",
   "license": "MIT",
   "scripts": {
