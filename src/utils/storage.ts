@@ -38,6 +38,10 @@ export function getData<T = any>(key: string): T | undefined {
 }
 
 export function setData<T>(ext: seal.ExtInfo, key: string, value: T) {
+  if (value === undefined || value === null) {
+    console.log("ai-interrupt: Data error, try reload plugins.");
+    return;
+  }
   memoryStore.set(key, value);
   storageSet(ext, key, JSON.stringify(value));
 }
