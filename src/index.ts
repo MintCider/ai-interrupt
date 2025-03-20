@@ -46,19 +46,21 @@ function registerConfigs(ext: seal.ExtInfo): void {
   seal.ext.registerBoolConfig(ext, "image_custom_api", false, "是否使用自定义 API（格式详见 README）");
   seal.ext.registerStringConfig(ext, "image_custom_api_url", "", "自定义 API 的 URL");
   seal.ext.registerStringConfig(ext, "---------------------------- 文本大模型设置 ----------------------------", "本配置项无实际意义");
+  seal.ext.registerTemplateConfig(ext, "custom_variables", [""], "自定义变量");
+  seal.ext.registerTemplateConfig(ext, "custom_values", [""], "自定义变量的值，在被 eval 后传入 schema");
   seal.ext.registerBoolConfig(ext, "multi_turn", false, "以多轮对话的形式请求 API");
   seal.ext.registerBoolConfig(ext, "system_schema_switch", true, "是否为文本大模型提供系统提示");
   seal.ext.registerStringConfig(ext, "system_schema",
-    "你是一个工作在群聊中的机器人，你叫<nickname>，id为<id>。你工作在群聊中。接下来你会收到一系列消息，来自不同的用户和你自己，以及你曾经记录的记忆。你应该如此插话：\n\n" +
-    "1. 以「<nickname>（<id>）：内容」的方式回复。\n" +
+    "你是一个工作在群聊中的机器人，你叫{{nickname}}，id为{{id}}。你工作在群聊中。接下来你会收到一系列消息，来自不同的用户和你自己，以及你曾经记录的记忆。你应该如此插话：\n\n" +
+    "1. 以「{{nickname}}（{{id}}）：内容」的方式回复。\n" +
     "2. 如果你认为有值得长期记忆的内容，另起一行，以[memory]记忆内容[/memory]的格式返回，将尖括号替换为实际的记忆内容。\n" +
     "3. 如果你认为有些记忆不必再记住，另起一行，以[delete]要删除的记忆内容[/delete]的格式返回，要删除的内容不要包括序号，要与记忆本身一致。\n\n" +
     "回复越短越好，如同真正的群聊参与者。\n\n" +
     "当前记忆：\n" +
-    "<memory>", "文本大模型的系统提示格式");
-  seal.ext.registerStringConfig(ext, "user_schema", "<nickname>（<id>）：<message>", "文本大模型的用户消息 prompt 格式");
-  seal.ext.registerStringConfig(ext, "assistant_schema", "<nickname>（<id>）：<message>", "文本大模型的骰子消息 prompt 格式");
-  seal.ext.registerStringConfig(ext, "retrieve_schema", "<nickname>（<id>）：(.*)", "从大模型回复提取骰子消息的正则表达式（**注意区分全角半角**）");
+    "{{memory}}", "文本大模型的系统提示格式");
+  seal.ext.registerStringConfig(ext, "user_schema", "{{nickname}}（{{id}}）：{{message}}", "文本大模型的用户消息 prompt 格式");
+  seal.ext.registerStringConfig(ext, "assistant_schema", "{{nickname}}（{{id}}）：{{message}}", "文本大模型的骰子消息 prompt 格式");
+  seal.ext.registerStringConfig(ext, "retrieve_schema", "{{nickname}}（{{id}}）：(.*)", "从大模型回复提取骰子消息的正则表达式（**注意区分全角半角**）");
   seal.ext.registerTemplateConfig(ext, "filter_schema", ["<think>[\\s\\S]*</think>"], "从大模型回复过滤内容的正则表达式");
   seal.ext.registerBoolConfig(ext, "memory_switch", false, "是否启用记忆功能");
   seal.ext.registerStringConfig(ext, "memory_schema", "\\[memory\\](.*)\\[/memory\\]", "从大模型回复提取记忆的正则表达式（**注意区分全角半角**）");
@@ -252,11 +254,15 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
           seal.ext.getStringConfig(ext, "id"),
           "",
           formatMemory(memories[ctx.group.groupId]),
+          seal.ext.getTemplateConfig(ext, "custom_variables"),
+          seal.ext.getTemplateConfig(ext, "custom_values")
         ),
         seal.ext.getStringConfig(ext, "user_schema"),
         seal.ext.getStringConfig(ext, "assistant_schema"),
         formatMemory(memories[ctx.group.groupId]),
-        seal.ext.getBoolConfig(ext, "multi_turn")
+        seal.ext.getBoolConfig(ext, "multi_turn"),
+        seal.ext.getTemplateConfig(ext, "custom_variables"),
+        seal.ext.getTemplateConfig(ext, "custom_values")
       ),
       seal.ext.getBoolConfig(ext, "custom_request_body"), seal.ext.getStringConfig(ext, "custom_request_body_text"),
       seal.ext.getStringConfig(ext, "model"), seal.ext.getIntConfig(ext, "max_tokens"),
@@ -281,6 +287,8 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
         seal.ext.getStringConfig(ext, "id"),
         "",
         "",
+        seal.ext.getTemplateConfig(ext, "custom_variables"),
+        seal.ext.getTemplateConfig(ext, "custom_values")
       ), "g");
       const deleteMemoryMatchExpr = new RegExp(replaceMarker(
         seal.ext.getStringConfig(ext, "delete_memory_schema"),
@@ -288,6 +296,8 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
         seal.ext.getStringConfig(ext, "id"),
         "",
         "",
+        seal.ext.getTemplateConfig(ext, "custom_variables"),
+        seal.ext.getTemplateConfig(ext, "custom_values")
       ), "g");
       const memoryMatchResult = [...resp.matchAll(memoryMatchExpr)];
       const deleteMemoryMatchResult = [...resp.matchAll(deleteMemoryMatchExpr)];
@@ -322,6 +332,8 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
         seal.ext.getStringConfig(ext, "id"),
         "",
         "",
+        seal.ext.getTemplateConfig(ext, "custom_variables"),
+        seal.ext.getTemplateConfig(ext, "custom_values")
       ), seal.ext.getBoolConfig(ext, "regexp_m") ? "gm" : "g");
       resp = resp.replace(filter, "");
     }
@@ -331,6 +343,8 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
       seal.ext.getStringConfig(ext, "id"),
       "",
       "",
+      seal.ext.getTemplateConfig(ext, "custom_variables"),
+      seal.ext.getTemplateConfig(ext, "custom_values")
     ), seal.ext.getBoolConfig(ext, "regexp_m") ? "gm" : "g");
     const retrieveMatchResult = [...resp.matchAll(retrieveMatchExpr)];
     for (const match of retrieveMatchResult) {

@@ -58,7 +58,7 @@ export class ChatHistory {
     return this.messages.length;
   }
 
-  buildPrompt(systemPromptSwitch: boolean, systemPrompt: string, userSchema: string, assistantSchema: string, memory: string, multiTurn: boolean): PromptMessage[] {
+  buildPrompt(systemPromptSwitch: boolean, systemPrompt: string, userSchema: string, assistantSchema: string, memory: string, multiTurn: boolean, keys: string[], values: string[]): PromptMessage[] {
     const prompt: PromptMessage[] = systemPromptSwitch ? [{
       role: "system",
       content: systemPrompt
@@ -72,6 +72,8 @@ export class ChatHistory {
         message.id,
         message.content,
         memory,
+        keys,
+        values
       );
       combinedContent = combinedContent + parsedMessage + "\n";
       if (multiTurn) {

@@ -215,6 +215,8 @@ export function handleShow(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Me
       histories[ctx.group.groupId].messages[histories[ctx.group.groupId].getLength() - num].id,
       histories[ctx.group.groupId].messages[histories[ctx.group.groupId].getLength() - num].content,
       formatMemory(memories[ctx.group.groupId]),
+      seal.ext.getTemplateConfig(ext, "custom_keys"),
+      seal.ext.getTemplateConfig(ext, "custom_values")
     ));
     return seal.ext.newCmdExecuteResult(true);
   }
