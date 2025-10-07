@@ -208,7 +208,8 @@ async function onNotCommandReceived(ext: seal.ExtInfo, ctx: seal.MsgContext, msg
   let trigger = false;
   let triggerDebugStr = `ai-interrupt: current possibility: ${possibility}, `;
   // Check at
-  if (msg.message.includes(`[CQ:at,qq=${seal.ext.getStringConfig(ext, "id")}]`)) {
+  const atRegex = new RegExp(`\\[CQ:at,qq=${seal.ext.getStringConfig(ext, "id")}(?:,.*?)?\\]`);
+  if (atRegex.test(msg.message)) {
     trigger = seal.ext.getBoolConfig(ext, "react_at");
     triggerDebugStr += `mentioned (at): true, react_at: ${trigger}, `;
   } else {
