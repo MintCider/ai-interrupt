@@ -1,13 +1,14 @@
 import {GroupMemory} from "../model";
 
-export function replaceMarker(raw: string, nickname: string, id: string, message: string, memory: string, keys: string[], values: string[]): string {
-  const markerList = ["nickname", "id", "message", "memory", "time"];
+export function replaceMarker(raw: string, nickname: string, id: string, message: string, memory: string, keys: string[], values: string[], msgTimestamp?: number): string {
+  const markerList = ["nickname", "id", "message", "memory", "time", "msg_time"];
   const markerMap: {[key: string]: string} = {
     nickname: nickname,
     id: id,
     message: message,
     memory: memory,
-    time: Date().toString()
+    time: new Date().toLocaleString('zh-CN'),  // 改为与 msg_time 一致的格式
+    msg_time: msgTimestamp ? new Date(msgTimestamp).toLocaleString('zh-CN') : "未知时间"
   }
   for (let i = 0; i < keys.length && i < values.length; i++) {
     markerList.push(keys[i]);

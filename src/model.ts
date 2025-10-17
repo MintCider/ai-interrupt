@@ -7,6 +7,7 @@ export type Message = {
   nickname: string;
   id: string;
   content: string;
+  timestamp?: number; // 消息时间戳，可选字段以保持向后兼容
 };
 
 export type PromptMessage = {
@@ -39,6 +40,7 @@ export class ChatHistory {
       nickname: nickname,
       id: id,
       content: message,
+      timestamp: Date.now(),
     });
   }
 
@@ -51,6 +53,7 @@ export class ChatHistory {
       nickname: nickname,
       id: id,
       content: message,
+      timestamp: Date.now(),
     });
   }
 
@@ -73,7 +76,8 @@ export class ChatHistory {
         message.content,
         memory,
         keys,
-        values
+        values,
+        message.timestamp
       );
       combinedContent = combinedContent + parsedMessage + "\n";
       if (multiTurn) {
@@ -95,13 +99,14 @@ export class ChatHistory {
     for (const [key, data] of Object.entries(raw)) {
       const chatHistory = new ChatHistory();
 
-      // 类型安全校验
+      // 类型安全校验，保持向后兼容
       if (Array.isArray(data?.messages)) {
-        chatHistory.messages = data.messages.map((msg: Message) => ({
-          role: msg.role,          // 默认值处理
-          nickname: msg.nickname,      // 防止undefined
-          id: msg.id,
-          content: msg.content
+        chatHistory.messages = data.messages.map((msg: any) => ({
+          role: msg.role,
+          nickname: msg.nickname || "未知用户",
+          id: msg.id || "",
+          content: msg.content || "",
+          timestamp: msg.timestamp || Date.now() // 如果没有时间戳，使用当前时间
         }));
       }
 

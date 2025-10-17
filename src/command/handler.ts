@@ -207,16 +207,18 @@ export function handleShow(ext: seal.ExtInfo, ctx: seal.MsgContext, msg: seal.Me
       seal.replyToSender(ctx, msg, "数字超过现有历史记录范围");
       return seal.ext.newCmdExecuteResult(true);
     }
+    const targetMessage = histories[ctx.group.groupId].messages[histories[ctx.group.groupId].getLength() - num];
     seal.replyToSender(ctx, msg, replaceMarker(
-      histories[ctx.group.groupId].messages[histories[ctx.group.groupId].getLength() - num].role === "user" ?
+      targetMessage.role === "user" ?
         seal.ext.getStringConfig(ext, "user_schema") :
         seal.ext.getStringConfig(ext, "assistant_schema"),
-      histories[ctx.group.groupId].messages[histories[ctx.group.groupId].getLength() - num].nickname,
-      histories[ctx.group.groupId].messages[histories[ctx.group.groupId].getLength() - num].id,
-      histories[ctx.group.groupId].messages[histories[ctx.group.groupId].getLength() - num].content,
+      targetMessage.nickname,
+      targetMessage.id,
+      targetMessage.content,
       formatMemory(memories[ctx.group.groupId]),
       seal.ext.getTemplateConfig(ext, "custom_keys"),
-      seal.ext.getTemplateConfig(ext, "custom_values")
+      seal.ext.getTemplateConfig(ext, "custom_values"),
+      targetMessage.timestamp
     ));
     return seal.ext.newCmdExecuteResult(true);
   }
